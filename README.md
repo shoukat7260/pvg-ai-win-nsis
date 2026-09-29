@@ -1,71 +1,112 @@
-## 🌟 核心功能
+# PVG AI — Product Generator AI
 
-### 账户管理
-- **多账户切换**：快速在不同 Cursor 账户间无缝切换
-- **智能重置**：一键重置机器码破解使用限制
-- **状态监控**：实时追踪账户使用情况
-  - 高级模型用量统计
-  - 基础模型用量分析
-  - 账户有效期监测
+**Phase 1:** APPROVED  
+**Phase 2:** APPROVED  
+**Phase 3:** APPROVED  
+**Phase 4:** READY FOR USER ACCEPTANCE (not approved until you sign off)
 
-### 用户体验
-- 🎨 主题支持：深色/浅色双模式自由切换
-- 🌐 多语言：国际化支持（持续更新中）
-- ⚙️ 会员系统：解锁更多高级功能
+PVG AI is a local-first AI video creation and professional editing ecosystem.
+
+| Phase | Focus |
+|-------|--------|
+| 1 | Security & architecture foundation |
+| 2 | Auth, devices, vault, subscriptions |
+| 3 | Local media engine, projects, import, proxy, preview foundation |
+| 4 | Professional editor UI, timeline, canvas, keyframes, AI Copilot |
 
 ---
-## 构建教程
-### 步骤
 
-**1. 获取代码**
+## What Phase 4 includes
+
+- Schema **v3** sequences/tracks/clips (transform, keyframes, effects, transitions, text/shapes)
+- Desktop **Edit** workspace (`/app/edit`) — professional NLE chrome
+- Command/undo history (`@pvg/editor-core`)
+- Timeline edit ops (move/trim/split/ripple/roll/link/group)
+- Canvas program monitor + inspector
+- AI Editor Copilot (allowlisted tools only)
+- Command palette + keyboard shortcuts
+
+## What Phase 4 does **not** include
+
+AI video generation (Phase 5), voice/dubbing (Phase 6), advanced color/VFX (Phase 7), final export mastering.
+
+See `docs/PHASE-4-IMPLEMENTATION.md` and `docs/PHASE-4-USER-ACCEPTANCE.md`.
+
+---
+
+## What Phase 3 includes
+
+- Schema v2 `.pvg` projects (assets, bins, sequences foundation)
+- Media import (LINK default / optional COPY)
+- FFmpeg probe, thumbnails, waveforms, proxies (argv-safe)
+- Local job center with cancel
+- Source monitor preview
+- Media browser (search/filter/sort)
+- Missing media / relink architecture
+- Autosave / recovery helpers
+- Path-safe derivatives (never overwrite source)
+
+## What Phase 3 does **not** include
+
+Full timeline editor, AI generation, voice/dubbing, cloud media sync, marketplace.
+
+---
+
+## Quick start
+
 ```bash
-git clone https://github.com/Cloxl/CursorPool_Client.git && cd CursorPool_Client && pnpm i
+./scripts/dev-up.sh
+pnpm install
+cp .env.example .env
+./scripts/run-api.sh
+pnpm --filter @pvg/desktop tauri:dev   # preferred for media
+# or: pnpm --filter @pvg/desktop dev   # browser preview (mocked native media)
+pnpm --filter @pvg/web dev
 ```
 
-**2. 后端开发**  
-根据 `swagger.json` 编写 API
+Install FFmpeg/ffprobe on PATH (or set `PVG_FFMPEG_PATH` / `PVG_FFPROBE_PATH`) for real probe/proxy/thumbnail generation.
 
-**3. 密钥配置**  
-根据文档[tauri updater](https://tauri.app/plugin/updater/)生成密钥 → 配置到 `tauri.conf.json` 和 GitHub 项目密钥中
+---
 
-**4. 安装依赖和构建**
+## Tests
+
 ```bash
-pnpm tauri build
+pnpm --filter @pvg/project-format test
+pnpm --filter @pvg/desktop test
+cd apps/desktop/src-tauri && cargo test -p pvg-core -p pvg-media -p pvg-vault
+
+# Backend — run alone against Docker Postgres :5444
+cd services/api && source .venv/bin/activate
+export APP_ENV=test JWT_SECRET=test_jwt_secret_not_for_production_use_32
+export JWT_ISSUER=pvg-ai JWT_AUDIENCE=pvg-api EMAIL_TRANSPORT=console
+export PAYMENT_PROVIDER=sandbox PAYMENT_WEBHOOK_SECRET=test_webhook_secret_32chars_xx
+export MFA_ENCRYPTION_KEY=UhC5MIGmK2lFWjv3qKbT0reAKcw1-S-IFg1DtAYQMRE=
+export DATABASE_URL=postgresql+asyncpg://pvg_app:pvg_dev_change_me@localhost:5444/pvg
+export DATABASE_ADMIN_URL=postgresql+asyncpg://pvg_migrator:pvg_migrator_dev_change_me@localhost:5444/pvg
+export REDIS_URL=redis://localhost:6480/0 CSRF_SECRET=test_csrf_secret_not_for_production_32
+pytest -q
 ```
 
----
-### cursor pool 官方后端技术栈:  
-![Gin](https://img.shields.io/badge/Gin-00ADD8?style=for-the-badge&logo=gin&logoColor=white) ![PHP](https://img.shields.io/badge/PHP-777BB4?style=for-the-badge&logo=php&logoColor=white) ![K8s](https://img.shields.io/badge/kubernetes-326CE5?style=for-the-badge&logo=kubernetes&logoColor=white) ![阿里云](https://img.shields.io/badge/阿里云-4D4D4D?style=for-the-badge&logo=alipay&logoColor=white)
-
-后端可以使用任何语言 满足swagger.json的api即可
-
-### **相关**: [Cursor纯协议注册机项目](https://github.com/CloxlAuto_Cursor)
----
-## 📜 开源协议声明
-
-### 使用条款
-本代码库遵循 **[MIT 许可证](LICENSE)**，但请注意：
-- **保留作者信息**：必须在设置页面优先展示原作者：
-  - [Cloxl](https://github.com/Cloxl)
-  - [Sanyela](https://github.com/Sanyela)
-- **禁止使用品牌元素**：
-  - ❌ `Cursor Pool` 名称及变体
-  - ❌ 原版软件图标
-  - ❌ 安装包显示原名称
-
-### 允许行为（需满足上述条件）
-- ✅ 代码复制/修改
-- ✅ 二次分发
-- ✅ 商业用途
-
-> **版本说明**：自 [v1.8.4](https://github.com/Cloxl/CursorPool_Client/tree/v1.8.4) 起，代码同步策略调整为仅同步版本号，不保留 commit 历史。
+Manual UAT: `docs/PHASE-3-USER-ACCEPTANCE.md`
 
 ---
 
-## 🛠️ 开发架构
-```text
-技术栈
-├── 核心框架: Tauri
-├── 前端框架: Vue3 + TypeScript
-├── 状态管理: Pinia
-└── UI组件: Naive UI
+## Ports
+
+| Service  | Host port |
+|----------|-----------|
+| Postgres | **5444**  |
+| Redis    | **6480**  |
+
+---
+
+## Security principles
+
+1. Never trust client ownership IDs  
+2. Authz + RLS  
+3. Provider secrets only on device vault — never in project.json  
+4. Narrow Tauri IPC; no shell; FFmpeg argv arrays only  
+5. Derivatives never overwrite sources  
+6. Local-first — no automatic media upload  
+
+See `docs/PHASE-3-*.md` and `docs/architecture/MEDIA-*.md`.

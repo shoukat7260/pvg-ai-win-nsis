@@ -1,0 +1,57 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: pvg-postgres
+    environment:
+      POSTGRES_DB: pvg
+      POSTGRES_USER: pvg_migrator
+      POSTGRES_PASSWORD: pvg_migrator_dev_change_me
+    ports:
+      - "5444:5432"
+    volumes:
+      - pvg_pg_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pvg_migrator -d pvg"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: pvg-redis
+    ports:
+      - "6480:6379"
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build:
+      context: ../../services/api
+      dockerfile: Dockerfile
+    container_name: pvg-api
+    env_file:
+      - ../../.env.example
+    environment:
+      APP_ENV: development
+      DATABASE_URL: postgresql+asyncpg://pvg_app:pvg_dev_change_me@postgres:5432/pvg
+      DATABASE_ADMIN_URL: postgresql+asyncpg://pvg_migrator:pvg_migrator_dev_change_me@postgres:5432/pvg
+      REDIS_URL: redis://redis:6379/0
+      JWT_SECRET: dev_only_jwt_secret_change_for_real_deployments_32chars
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: >
+      sh -c "alembic upgrade head &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+
+volumes:
+  pvg_pg_data:

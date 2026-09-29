@@ -1,0 +1,20 @@
+[package]
+name = "pvg-media"
+version = "0.1.0"
+edition = "2021"
+description = "PVG AI media engine — probe, thumbnails, waveforms, proxies, jobs (no Tauri)"
+publish = false
+rust-version = "1.77"
+
+[dependencies]
+pvg-core = { path = "../pvg-core" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+uuid = { version = "1", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde", "clock"] }
+parking_lot = "0.12"
+sha2 = "0.10"
+
+[dev-dependencies]
+tempfile = "3"

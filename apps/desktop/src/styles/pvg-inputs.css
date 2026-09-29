@@ -1,0 +1,135 @@
+/**
+ * PVG AI — shared form control contract.
+ * Always sets explicit background + text (never inherit AppShell light color onto dark fills).
+ */
+
+.pvg-input,
+.pvg-textarea,
+.pvg-select {
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0;
+  font: inherit;
+  font-size: 0.8125rem;
+  line-height: 1.35;
+  border-radius: 8px;
+  border: 1px solid var(--pvg-input-border);
+  background: var(--pvg-input-bg);
+  color: var(--pvg-input-text);
+  padding: 0.5rem 0.75rem;
+  transition:
+    border-color var(--pvg-dur-fast, 100ms) var(--pvg-ease, ease),
+    background-color var(--pvg-dur-fast, 100ms) var(--pvg-ease, ease),
+    box-shadow var(--pvg-dur-fast, 100ms) var(--pvg-ease, ease);
+}
+
+.pvg-input::placeholder,
+.pvg-textarea::placeholder {
+  color: var(--pvg-input-placeholder);
+  opacity: 1;
+}
+
+.pvg-input:hover:not(:disabled):not(:focus),
+.pvg-textarea:hover:not(:disabled):not(:focus),
+.pvg-select:hover:not(:disabled):not(:focus) {
+  border-color: var(--pvg-input-border-hover);
+  background: var(--pvg-input-bg-hover);
+}
+
+.pvg-input:focus,
+.pvg-textarea:focus,
+.pvg-select:focus,
+.pvg-input:focus-visible,
+.pvg-textarea:focus-visible,
+.pvg-select:focus-visible {
+  outline: none;
+  border-color: var(--pvg-input-border-focus);
+  box-shadow: 0 0 0 3px var(--pvg-input-ring);
+}
+
+.pvg-input:disabled,
+.pvg-textarea:disabled,
+.pvg-select:disabled {
+  background: var(--pvg-input-bg-disabled);
+  color: var(--pvg-text-muted, #7a8490);
+  border-color: var(--pvg-border-subtle, rgba(255, 255, 255, 0.055));
+  cursor: not-allowed;
+  opacity: 1;
+}
+
+.pvg-input[aria-invalid="true"],
+.pvg-textarea[aria-invalid="true"],
+.pvg-input.pvg-input--error,
+.pvg-textarea.pvg-input--error {
+  border-color: var(--pvg-input-border-error);
+}
+
+.pvg-input.pvg-input--success,
+.pvg-textarea.pvg-input--success {
+  border-color: var(--pvg-input-border-success);
+}
+
+/* Light-surface variant (Settings / Auth on light AppShell) */
+.pvg-input--light,
+.pvg-textarea.pvg-input--light,
+.pvg-select.pvg-input--light {
+  background: var(--pvg-input-light-bg);
+  color: var(--pvg-input-light-text);
+  border-color: var(--pvg-input-light-border);
+}
+
+.pvg-input--light::placeholder,
+.pvg-textarea.pvg-input--light::placeholder {
+  color: var(--pvg-input-light-placeholder);
+}
+
+.pvg-input--light:hover:not(:disabled):not(:focus) {
+  background: var(--pvg-input-light-bg-hover);
+  border-color: var(--pvg-input-light-border-hover);
+}
+
+.pvg-input--light:focus,
+.pvg-input--light:focus-visible {
+  border-color: var(--pvg-input-light-border-focus);
+  box-shadow: 0 0 0 3px var(--pvg-input-light-ring);
+}
+
+.pvg-input--light:disabled {
+  background: var(--pvg-input-light-bg-disabled);
+  color: #737373;
+}
+
+/* Compact numeric (inspector) */
+.pvg-input--compact {
+  padding: 0.2rem 0.4rem;
+  border-radius: 3px;
+  font-family: var(--pvg-font-mono, ui-monospace, monospace);
+  font-size: 0.75rem;
+}
+
+/* Editor AI / command search inherit dark contract */
+.ed-ai-input input,
+.cmd-palette input,
+.ed-num input,
+.ed-media-search {
+  background: var(--pvg-input-bg);
+  color: var(--pvg-input-text);
+  border: 1px solid var(--pvg-input-border);
+  border-radius: var(--pvg-radius-sm, 3px);
+}
+
+.ed-ai-input input::placeholder,
+.cmd-palette input::placeholder,
+.ed-media-search::placeholder {
+  color: var(--pvg-input-placeholder);
+  opacity: 1;
+}
+
+.ed-ai-input input:focus,
+.cmd-palette input:focus,
+.ed-num input:focus,
+.ed-media-search:focus {
+  outline: none;
+  border-color: var(--pvg-input-border-focus);
+  box-shadow: 0 0 0 2px var(--pvg-input-ring);
+}

@@ -1,0 +1,192 @@
+@import "./tokens.css";
+
+/* Focus ring utility */
+.pvg-focus-ring:focus-visible {
+  outline: none;
+  box-shadow: var(--pvg-focus-ring);
+}
+
+.pvg-focus-ring:focus:not(:focus-visible) {
+  outline: none;
+  box-shadow: none;
+}
+
+/* Button */
+.pvg-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--pvg-space-2);
+  font-family: var(--pvg-font-sans);
+  font-size: var(--pvg-text-sm);
+  font-weight: 500;
+  line-height: var(--pvg-leading-tight);
+  border-radius: var(--pvg-radius-md);
+  border: 1px solid transparent;
+  padding: 0.5rem 0.875rem;
+  cursor: pointer;
+  transition:
+    background var(--pvg-duration-fast) var(--pvg-ease),
+    border-color var(--pvg-duration-fast) var(--pvg-ease),
+    color var(--pvg-duration-fast) var(--pvg-ease),
+    box-shadow var(--pvg-duration-fast) var(--pvg-ease);
+  user-select: none;
+}
+
+.pvg-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.pvg-btn--primary {
+  background: var(--pvg-accent);
+  color: var(--pvg-text-inverse);
+}
+
+.pvg-btn--primary:hover:not(:disabled) {
+  background: var(--pvg-accent-hover);
+}
+
+.pvg-btn--secondary {
+  background: var(--pvg-bg-hover);
+  color: var(--pvg-text-primary);
+  border-color: var(--pvg-border-strong);
+}
+
+.pvg-btn--secondary:hover:not(:disabled) {
+  background: var(--pvg-bg-active);
+}
+
+.pvg-btn--ghost {
+  background: transparent;
+  color: var(--pvg-text-secondary);
+}
+
+.pvg-btn--ghost:hover:not(:disabled) {
+  background: var(--pvg-bg-hover);
+  color: var(--pvg-text-primary);
+}
+
+.pvg-btn--danger {
+  background: transparent;
+  color: var(--pvg-danger);
+  border-color: rgba(224, 106, 106, 0.35);
+}
+
+.pvg-btn--danger:hover:not(:disabled) {
+  background: rgba(224, 106, 106, 0.12);
+}
+
+.pvg-btn--sm {
+  padding: 0.3rem 0.625rem;
+  font-size: var(--pvg-text-xs);
+}
+
+.pvg-btn--lg {
+  padding: 0.7rem 1.1rem;
+  font-size: var(--pvg-text-md);
+}
+
+/* Panel — glass-inspired surface */
+.pvg-panel {
+  background: var(--pvg-bg-panel);
+  backdrop-filter: blur(var(--pvg-glass-blur));
+  -webkit-backdrop-filter: blur(var(--pvg-glass-blur));
+  border: 1px solid var(--pvg-border-subtle);
+  border-radius: var(--pvg-radius-lg);
+  box-shadow: var(--pvg-glass-shine), 0 8px 32px rgba(0, 0, 0, 0.35);
+  color: var(--pvg-text-primary);
+  padding: var(--pvg-space-4);
+}
+
+.pvg-panel__title {
+  margin: 0 0 var(--pvg-space-2);
+  font-family: var(--pvg-font-display);
+  font-size: var(--pvg-text-lg);
+  font-weight: 560;
+  letter-spacing: -0.01em;
+}
+
+.pvg-panel__body {
+  margin: 0;
+  color: var(--pvg-text-secondary);
+  font-size: var(--pvg-text-sm);
+  line-height: var(--pvg-leading-normal);
+}
+
+/* Badge */
+.pvg-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-family: var(--pvg-font-sans);
+  font-size: var(--pvg-text-xs);
+  font-weight: 550;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--pvg-radius-sm);
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.pvg-badge--neutral {
+  background: var(--pvg-bg-active);
+  color: var(--pvg-text-secondary);
+  border-color: var(--pvg-border-subtle);
+}
+
+.pvg-badge--accent {
+  background: var(--pvg-accent-muted);
+  color: var(--pvg-accent-hover);
+  border-color: rgba(61, 184, 168, 0.28);
+}
+
+.pvg-badge--success {
+  background: rgba(92, 184, 138, 0.14);
+  color: var(--pvg-success);
+}
+
+.pvg-badge--warning {
+  background: rgba(212, 162, 76, 0.14);
+  color: var(--pvg-warning);
+}
+
+.pvg-badge--danger {
+  background: rgba(224, 106, 106, 0.14);
+  color: var(--pvg-danger);
+}
+
+/* Empty state */
+.pvg-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: var(--pvg-space-3);
+  padding: var(--pvg-space-6) var(--pvg-space-4);
+  color: var(--pvg-text-secondary);
+}
+
+.pvg-empty__title {
+  margin: 0;
+  font-family: var(--pvg-font-display);
+  font-size: var(--pvg-text-lg);
+  font-weight: 560;
+  color: var(--pvg-text-primary);
+}
+
+.pvg-empty__description {
+  margin: 0;
+  max-width: 28rem;
+  font-size: var(--pvg-text-sm);
+  line-height: var(--pvg-leading-normal);
+  color: var(--pvg-text-muted);
+}
+
+.pvg-empty__actions {
+  display: flex;
+  gap: var(--pvg-space-2);
+  margin-top: var(--pvg-space-2);
+}

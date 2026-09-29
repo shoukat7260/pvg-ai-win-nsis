@@ -1,0 +1,129 @@
+/**
+ * PVG AI Phase 4.1 — Editor workstation design tokens
+ * Premium dark creative software — accent used sparingly.
+ */
+
+:root {
+  /* —— Surfaces —— */
+  --pvg-bg-root: #0a0c0f;
+  --pvg-bg-workspace: #0d1014;
+  --pvg-surface-1: #12161c;
+  --pvg-surface-2: #171c24;
+  --pvg-surface-3: #1e2530;
+  --pvg-surface-hover: rgba(255, 255, 255, 0.045);
+  --pvg-surface-active: rgba(61, 184, 168, 0.14);
+
+  /* —— Borders —— */
+  --pvg-border-subtle: rgba(255, 255, 255, 0.055);
+  --pvg-border-default: rgba(255, 255, 255, 0.1);
+  --pvg-border-strong: rgba(255, 255, 255, 0.16);
+  --pvg-border-focus: rgba(61, 184, 168, 0.55);
+
+  /* —— Text —— */
+  --pvg-text-primary: #edf1f5;
+  --pvg-text-secondary: #a8b0ba;
+  --pvg-text-muted: #7a8490;
+  --pvg-text-disabled: #525a64;
+  --pvg-text-inverse: #0a0c0f;
+
+  /* —— Accent (signature teal — intentional, not wallpaper) —— */
+  --pvg-accent: #3db8a8;
+  --pvg-accent-hover: #4ecbb9;
+  --pvg-accent-soft: rgba(61, 184, 168, 0.16);
+  --pvg-accent-ring: rgba(61, 184, 168, 0.4);
+
+  /* —— Semantic —— */
+  --pvg-success: #5cb88a;
+  --pvg-warning: #d4a24c;
+  --pvg-danger: #e06a6a;
+  --pvg-info: #5a9fd4;
+
+  /* —— Timeline type tints (subtle) —— */
+  --pvg-track-video: #2a4058;
+  --pvg-track-audio: #2a4a40;
+  --pvg-track-text: #5a4a2e;
+  --pvg-track-overlay: #3a3250;
+  --pvg-playhead: #f0c14a;
+
+  /* —— Type —— */
+  --pvg-font-sans: "IBM Plex Sans", "Segoe UI", "Helvetica Neue", sans-serif;
+  --pvg-font-mono: "IBM Plex Mono", "SF Mono", ui-monospace, monospace;
+  --pvg-fs-display: 1.125rem;
+  --pvg-fs-panel: 0.6875rem;
+  --pvg-fs-body: 0.8125rem;
+  --pvg-fs-label: 0.6875rem;
+  --pvg-fs-value: 0.75rem;
+  --pvg-fs-meta: 0.6875rem;
+  --pvg-fs-timeline: 0.625rem;
+
+  /* —— Space / radius —— */
+  --pvg-space-1: 4px;
+  --pvg-space-2: 8px;
+  --pvg-space-3: 12px;
+  --pvg-space-4: 16px;
+  --pvg-space-5: 24px;
+  --pvg-radius-sm: 3px;
+  --pvg-radius-md: 5px;
+  --pvg-radius-lg: 8px;
+  /* Avoid giant SaaS pills in editor */
+
+  /* —— Shadow / motion —— */
+  --pvg-shadow-panel: 0 1px 0 rgba(255, 255, 255, 0.04) inset;
+  --pvg-shadow-float: 0 12px 40px rgba(0, 0, 0, 0.45);
+  --pvg-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --pvg-dur-fast: 100ms;
+  --pvg-dur: 160ms;
+
+  /* —— Z —— */
+  --pvg-z-base: 1;
+  --pvg-z-panel: 10;
+  --pvg-z-sticky: 20;
+  --pvg-z-dropdown: 40;
+  --pvg-z-tooltip: 50;
+  --pvg-z-modal: 60;
+  --pvg-z-palette: 70;
+
+  /* —— Layout mins —— */
+  --pvg-rail-w: 44px;
+  --pvg-rail-w-expanded: 112px;
+  --pvg-left-min: 200px;
+  --pvg-left-max: 400px;
+  --pvg-right-min: 260px;
+  --pvg-right-max: 460px;
+  --pvg-timeline-min: 140px;
+  --pvg-timeline-max: 520px;
+  --pvg-viewer-min: 180px;
+  --pvg-ai-min: 160px;
+
+  /* —— Input contract (never inherit accidental colors) —— */
+  /* Dark surface (editor / AI / dark panels) */
+  --pvg-input-bg: #161b22;
+  --pvg-input-bg-hover: #1a2129;
+  --pvg-input-bg-disabled: #12161c;
+  --pvg-input-text: #edf1f5;
+  --pvg-input-placeholder: #8b949e;
+  --pvg-input-border: rgba(255, 255, 255, 0.14);
+  --pvg-input-border-hover: rgba(255, 255, 255, 0.22);
+  --pvg-input-border-focus: var(--pvg-accent);
+  --pvg-input-ring: rgba(61, 184, 168, 0.35);
+  --pvg-input-border-error: var(--pvg-danger);
+  --pvg-input-border-success: var(--pvg-success);
+
+  /* Light surface (Settings / Auth forms on light shell) */
+  --pvg-input-light-bg: #ffffff;
+  --pvg-input-light-bg-hover: #fafafa;
+  --pvg-input-light-bg-disabled: #f0f0f0;
+  --pvg-input-light-text: #0a0a0a;
+  --pvg-input-light-placeholder: #737373;
+  --pvg-input-light-border: #d4d4d4;
+  --pvg-input-light-border-hover: #a3a3a3;
+  --pvg-input-light-border-focus: #3d7874;
+  --pvg-input-light-ring: rgba(91, 164, 160, 0.35);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --pvg-dur-fast: 1ms;
+    --pvg-dur: 1ms;
+  }
+}

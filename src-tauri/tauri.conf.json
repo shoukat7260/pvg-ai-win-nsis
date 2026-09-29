@@ -1,106 +1,65 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "cursor-pool",
-  "version": "../package.json",
-  "identifier": "com.cursor-pool.app",
+  "productName": "PVG AI",
+  "version": "0.1.0",
+  "identifier": "ai.pvg.desktop",
   "build": {
-    "beforeDevCommand": "pnpm run dev",
+    "beforeDevCommand": "pnpm --filter @pvg/desktop dev",
     "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "pnpm run build",
-    "frontendDist": "../dist"
+    "beforeBuildCommand": "pnpm --filter @pvg/desktop build",
+    "frontendDist": "../apps/desktop/dist"
   },
   "app": {
     "windows": [
       {
-        "title": "cursor-pool",
-        "minWidth": 860,
-        "minHeight": 600,
-        "decorations": false,
-        "minimizable": true,
-        "closable": true,
-        "visible": true,
         "label": "main",
-        "center": true,
-        "transparent": true,
-        "titleBarStyle": "Overlay"
+        "title": "PVG AI",
+        "width": 1280,
+        "height": 800,
+        "minWidth": 960,
+        "minHeight": 640,
+        "resizable": true,
+        "fullscreen": false,
+        "decorations": true,
+        "transparent": false,
+        "center": true
       }
     ],
     "security": {
-      "csp": null,
-      "capabilities": ["main-capability"]
-    },
-    "macOSPrivateApi": true
+      "csp": "default-src 'self'; img-src 'self' data: blob: asset: https://asset.localhost http://asset.localhost; media-src 'self' blob: asset: https://asset.localhost http://asset.localhost; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' ipc: http://ipc.localhost http://localhost:8000 http://127.0.0.1:8000",
+      "assetProtocol": {
+        "enable": true,
+        "scope": {
+          "allow": [
+            "$APPDATA/**",
+            "$APPLOCALDATA/**",
+            "$TEMP/PVG/**",
+            "/tmp/PVG/**"
+          ]
+        }
+      }
+    }
   },
   "bundle": {
     "active": true,
-    "category": "DeveloperTool",
-    "copyright": "",
-    "targets": "all",
-    "createUpdaterArtifacts": true,
+    "targets": [
+      "nsis"
+    ],
     "icon": [
       "icons/32x32.png",
-      "icons/40x40.png",
-      "icons/48x48.png",
-      "icons/80x80.png",
-      "icons/120x120.png",
       "icons/128x128.png",
-      "icons/icon.icns",
-      "icons/icon.ico"
+      "icons/henry.w@example.net",
+      "icons/icon.png"
     ],
     "windows": {
-      "certificateThumbprint": null,
-      "digestAlgorithm": "sha256",
-      "timestampUrl": "",
-      "wix": {
-          "language": ["zh-CN", "en-US"]
-      },
       "webviewInstallMode": {
         "type": "downloadBootstrapper"
       },
       "nsis": {
-        "languages": ["SimpChinese", "English"],
-        "displayLanguageSelector": true
-      }
-    },
-    "macOS": {
-      "entitlements": null,
-      "exceptionDomain": "",
-      "frameworks": [],
-      "providerShortName": null,
-      "signingIdentity": null,
-      "minimumSystemVersion": "10.13"
-    },
-    "linux": {
-      "deb": {
-        "depends": []
-      },
-      "rpm": {
-        "depends": []
-      },
-      "appimage": {
-        "bundleMediaFramework": true
+        "installMode": "currentUser",
+        "displayLanguageSelector": false
       }
     }
   },
-  "plugins": {
-    "os": {
-      "open": true
-    },
-    "shell": {
-      "open": true
-    },
-    "updater": {
-      "active": true,
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEM5NjUxODYwQkUzMkY2RTYKUldUbTlqSytZQmhseVIvWXg0c1RLakxCajBpdGQzeGxUbVMyaGYyRWZXdXdvNURtTW5lZXBVVWQK",
-      "endpoints": [
-        "https://vip.123pan.cn/1840147130/updater/latest.json",
-        "https://github.com/Cloxl/CursorPool_Client/releases/latest/download/latest.json",
-        "https://gh-proxy.com/github.com/Cloxl/CursorPool_Client/releases/latest/download/latest.json"
-      ],
-      "windows": {
-        "installMode": "passive"
-      },
-      "dangerousInsecureTransportProtocol": true
-    }
-  }
+  "plugins": {}
 }
