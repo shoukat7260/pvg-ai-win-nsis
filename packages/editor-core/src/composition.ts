@@ -141,7 +141,11 @@ export function composeAtTime(
         effects: clip.effects.filter((e) => e.enabled),
         transitionIn: clip.transitionIn,
         transitionOut: clip.transitionOut,
-        volume: track.muted ? 0 : clip.volume,
+        volume: track.muted ? 0 : evaluateTransformProperty(
+        clip.volume,
+        clip.keyframes["volume"],
+        localTimeMs,
+      ),
         reverse: clip.reverse,
         speed: clip.speed,
         sourceTimeMs,

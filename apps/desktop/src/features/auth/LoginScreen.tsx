@@ -1,17 +1,31 @@
-import { GlassPanel } from "@/components/ui/GlassPanel";
-import { Button } from "@/components/ui/Button";
-import { useAuthStore } from "@/auth/authStore";
 import { useState, type FormEvent } from "react";
 import { LoginRequestSchema } from "@pvg/schemas";
+import { useAuthStore } from "@/auth/authStore";
+import { desktopApiConfig } from "@/config/desktopApiConfig";
+
+function BrandMark() {
+  return (
+    <span className="pvg-sidebar__mark" aria-hidden>
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none">
+        <path d="M3.5 18.5 12 5l8.5 13.5H3.5Z" fill="#E8F7FF" fillOpacity="0.95" />
+        <path d="M8.2 18.5 12 11.2 15.8 18.5H8.2Z" fill="#0B1F3A" fillOpacity="0.55" />
+        <rect x="7" y="19.2" width="10" height="1.4" rx="0.7" fill="#1EC8FF" />
+      </svg>
+    </span>
+  );
+}
 
 export function LoginScreen() {
   const loginWithPassword = useAuthStore((s) => s.loginWithPassword);
   const startBrowserLogin = useAuthStore((s) => s.startBrowserLogin);
+  const setView = useAuthStore((s) => s.setView);
   const status = useAuthStore((s) => s.status);
   const error = useAuthStore((s) => s.error);
+  const info = useAuthStore((s) => s.info);
   const clearError = useAuthStore((s) => s.clearError);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [clientError, setClientError] = useState<string | null>(null);
 
   const busy = status === "AUTHENTICATING";
@@ -29,134 +43,122 @@ export function LoginScreen() {
   }
 
   return (
-    <div
-      className="flex min-h-screen bg-[#f7f7f5] text-[#0a0a0a]"
-      data-theme="studio-auth"
-    >
-      <aside className="hidden w-[42%] flex-col justify-between bg-[#0a0a0a] px-10 py-12 text-[#f5f5f5] md:flex">
-        <div className="flex items-center gap-3">
-          <span className="grid h-9 w-9 place-items-center rounded-xl bg-white text-[#0a0a0a]">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none">
-              <path
-                d="M4 16.5 12 4l8 12.5H4Z"
-                stroke="currentColor"
-                strokeWidth="1.7"
-                strokeLinejoin="round"
-              />
-              <path d="M8.2 16.5h7.6" stroke="currentColor" strokeWidth="1.7" />
-            </svg>
-          </span>
-          <p className="font-display text-lg font-semibold tracking-tight">PVG AI</p>
+    <div className="pvg-auth" data-theme="studio-auth">
+      <div className="pvg-auth-card" data-testid="login-screen">
+        <div className="pvg-auth-card__brand">
+          <BrandMark />
+          <strong>PVG AI</strong>
         </div>
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#737373]">
-            Workstation
-          </p>
-          <h1 className="mt-3 font-display text-4xl font-semibold tracking-tight">
-            Sign in to your local-first studio.
-          </h1>
-          <p className="mt-4 max-w-sm text-sm leading-relaxed text-[#a3a3a3]">
-            Desktop keeps media on device. Cloud identity unlocks account, devices, and
-            billing — CapCut focus with Stripe clarity.
-          </p>
-        </div>
-        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#737373]">
-          Black · white · vault-backed
+        <h1>Sign in</h1>
+        <p className="pvg-auth-card__lead">
+          Local-first studio. Cloud identity unlocks account, devices, and billing.
         </p>
-      </aside>
 
-      <div className="flex flex-1 items-center justify-center px-6 py-10">
-        <GlassPanel
-          className="w-full max-w-md border border-[#e8e8e8] bg-white p-8 shadow-[0_18px_40px_rgba(10,10,10,0.06)] animate-fade-rise"
-          data-testid="login-screen"
-        >
-          <p className="font-display text-2xl font-semibold tracking-tight md:hidden">
-            PVG AI
+        {status === "SESSION_EXPIRED" ? (
+          <p className="pvg-auth-info" style={{ marginTop: 12 }}>
+            Your session expired. Sign in again — local projects are unchanged.
           </p>
-          <p className="font-display text-2xl font-semibold tracking-tight">Sign in</p>
-          <p className="mt-1 text-sm text-[#737373]">Access your workstation console</p>
+        ) : null}
 
-          {status === "SESSION_EXPIRED" ? (
-            <p className="mt-4 rounded-xl border border-[#e8e8e8] bg-[#fafafa] px-4 py-3 text-sm text-[#525252]">
-              Your session expired. Sign in again to continue. Local projects are unchanged.
-            </p>
-          ) : null}
-
-          <form className="mt-6 space-y-4" onSubmit={(e) => void onSubmit(e)} noValidate>
-            <label className="block text-[11px] font-semibold uppercase tracking-[0.06em] text-[#737373]">
-              Email
+        <form className="pvg-auth-form" onSubmit={(e) => void onSubmit(e)} noValidate>
+          <label>
+            <span className="pvg-field-label">Email</span>
+            <input
+              className="pvg-input"
+              name="email"
+              type="email"
+              autoComplete="username"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              data-testid="login-email"
+            />
+          </label>
+          <label>
+            <span className="pvg-field-label">Password</span>
+            <div style={{ display: "flex", gap: 8 }}>
               <input
-                name="email"
-                type="email"
-                autoComplete="username"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="mt-1.5 w-full rounded-xl border border-[#d4d4d4] bg-white px-3 py-2.5 text-sm text-[#0a0a0a]"
-                data-testid="login-email"
-              />
-            </label>
-            <label className="block text-[11px] font-semibold uppercase tracking-[0.06em] text-[#737373]">
-              Password
-              <input
+                className="pvg-input"
                 name="password"
-                type="password"
+                type={showPassword ? "text" : "password"}
                 autoComplete="current-password"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="mt-1.5 w-full rounded-xl border border-[#d4d4d4] bg-white px-3 py-2.5 text-sm text-[#0a0a0a]"
                 data-testid="login-password"
               />
-            </label>
+              <button
+                type="button"
+                className="pvg-btn pvg-btn--ghost"
+                onClick={() => setShowPassword((v) => !v)}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? "Hide" : "Show"}
+              </button>
+            </div>
+          </label>
 
-            {(clientError || error) && (
-              <p className="text-sm text-[#b42318]" role="alert" data-testid="login-error">
-                {clientError || error}
-              </p>
-            )}
+          {(clientError || error) && (
+            <p className="pvg-auth-error" role="alert" data-testid="login-error">
+              {clientError || error}
+            </p>
+          )}
+          {info && !error ? <p className="pvg-auth-info">{info}</p> : null}
 
-            <Button
-              type="submit"
-              className="w-full !bg-[#0a0a0a] !text-white hover:!bg-[#262626]"
-              disabled={busy}
-              data-testid="login-submit"
-            >
-              {busy ? "Signing in…" : "Sign in"}
-            </Button>
-          </form>
-
-          <div className="my-5 flex items-center gap-3 text-xs text-[#a3a3a3]">
-            <span className="h-px flex-1 bg-[#e8e8e8]" />
-            or
-            <span className="h-px flex-1 bg-[#e8e8e8]" />
-          </div>
-
-          <Button
-            variant="secondary"
-            className="w-full !border-[#d4d4d4] !bg-white !text-[#0a0a0a]"
+          <button
+            type="submit"
+            className="pvg-btn pvg-btn--primary pvg-btn--lg"
+            style={{ width: "100%" }}
             disabled={busy}
-            onClick={() => void startBrowserLogin()}
-            data-testid="continue-browser"
+            data-testid="login-submit"
           >
-            Continue in browser
-          </Button>
-          <p className="mt-3 text-center text-xs text-[#737373]">
-            Opens a secure browser window. Tokens are never shown in the UI.
-          </p>
-          <p className="mt-4 text-center text-xs text-[#737373]">
-            No account yet?{" "}
-            <a
-              href="http://localhost:5173/signup"
-              target="_blank"
-              rel="noreferrer"
-              className="font-semibold text-[#0a0a0a] underline-offset-2 hover:underline"
-              data-testid="create-account-link"
-            >
-              Create account
-            </a>
-          </p>
-        </GlassPanel>
+            {busy ? "Signing in…" : "Sign in"}
+          </button>
+        </form>
+
+        <p className="pvg-auth-footer" style={{ marginTop: 12 }}>
+          <a
+            href={`${desktopApiConfig.webOrigin}/forgot-password`}
+            target="_blank"
+            rel="noreferrer"
+            data-testid="forgot-password-link"
+          >
+            Forgot password?
+          </a>
+        </p>
+
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            margin: "16px 0",
+            color: "var(--pvg-text-muted)",
+            fontSize: 12,
+          }}
+        >
+          <span style={{ flex: 1, height: 1, background: "var(--pvg-border)" }} />
+          or
+          <span style={{ flex: 1, height: 1, background: "var(--pvg-border)" }} />
+        </div>
+
+        <button
+          type="button"
+          className="pvg-btn pvg-btn--ghost"
+          style={{ width: "100%" }}
+          disabled={busy}
+          onClick={() => void startBrowserLogin()}
+          data-testid="continue-browser"
+        >
+          Continue in browser
+        </button>
+
+        <p className="pvg-auth-footer">
+          No account yet?{" "}
+          <button type="button" onClick={() => setView("signup")} data-testid="create-account-link">
+            Create account
+          </button>
+        </p>
       </div>
     </div>
   );

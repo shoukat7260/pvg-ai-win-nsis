@@ -85,7 +85,15 @@ interface EditorState {
   insertMode: InsertMode;
   saving: boolean;
   lastError: string | null;
-  leftPanel: "media" | "project" | "text" | "transitions" | "effects" | "history";
+  leftPanel:
+    | "media"
+    | "project"
+    | "text"
+    | "transitions"
+    | "effects"
+    | "color"
+    | "history"
+    | "captions";
   /** Right dock: inspector-only, ai-only, or split (inspector top / AI bottom). */
   rightDockMode: "inspector" | "ai" | "split";
   panels: EditorLayoutPanels;
@@ -150,7 +158,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   saving: false,
   lastError: null,
   leftPanel: "media",
-  rightDockMode: "split",
+  rightDockMode: "inspector",
   panels: loadLayoutPrefs(),
   workspacePreset: "editor",
   clipboard: null,
@@ -311,7 +319,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     persistLayoutPrefs(panels);
     set({
       panels,
-      rightDockMode: "split",
+      rightDockMode: "inspector",
       workspacePreset: "editor",
       leftPanel: "media",
     });

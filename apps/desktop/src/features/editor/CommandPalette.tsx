@@ -4,6 +4,7 @@ import {
   DeleteClipsCommand,
   RippleDeleteCommand,
   AddMarkerCommand,
+  DuplicateClipsCommand,
 } from "@pvg/editor-core";
 import { useEditorStore } from "@/state/editorStore";
 
@@ -61,6 +62,25 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
         category: "Edit",
         run: () =>
           dispatch(new RippleDeleteCommand(seq.id, selection.clipIds)),
+      },
+      {
+        id: "duplicate",
+        name: "Duplicate",
+        category: "Edit",
+        shortcut: "Ctrl+D",
+        run: () => {
+          if (!selection.clipIds.length) return;
+          const primary = seq.tracks
+            .flatMap((t) => t.clips)
+            .find((c) => c.id === selection.clipIds[0]);
+          const dur =
+            primary && primary.timelineEndMs != null
+              ? primary.timelineEndMs - primary.timelineStartMs
+              : 1000;
+          dispatch(
+            new DuplicateClipsCommand(seq.id, selection.clipIds, dur),
+          );
+        },
       },
       {
         id: "marker",

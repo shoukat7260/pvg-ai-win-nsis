@@ -10,6 +10,9 @@ fi
 [[ -n "$REPO" ]] || { echo "Usage: $0 owner/repo" >&2; exit 1; }
 
 DIR="$ROOT/artifacts/windows"
+# Prefer canonical workflow on PVG-AI; fall back to billing-capable builder mirror.
+WORKFLOW_CANDIDATES=("windows-release.yml" "Dev Build")
+ARTIFACT_CANDIDATES=("pvg-ai-windows-x64" "")
 mkdir -p "$DIR"
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT

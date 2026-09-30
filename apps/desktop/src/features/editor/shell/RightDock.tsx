@@ -54,7 +54,7 @@ export function RightDock() {
           onClick={() => setMode("ai")}
           data-testid="dock-ai"
         >
-          AI Copilot
+          AI
         </button>
         <button
           type="button"
@@ -75,6 +75,9 @@ export function RightDock() {
         ) : null}
         {mode === "ai" ? (
           <div className="ed-dock-pane fill" data-testid="ai-dock-full">
+            <p className="ed-hint" style={{ padding: "8px 12px 0", margin: 0 }}>
+              Contextual assistant. Full PVG AI chatbot: Workspace → AI.
+            </p>
             <AiCopilotPanel />
           </div>
         ) : null}

@@ -48,11 +48,24 @@ export function CompositionLayer(props: {
   asset: MediaAsset | ProjectAssetDto | null;
   previewSource: PreviewSource;
   playing: boolean;
+  /** When false, video element contributes program audio (volume honored). */
+  muted?: boolean;
+  volume?: number;
   onSelect: () => void;
   onDragTransform?: (dx: number, dy: number) => void;
 }) {
-  const { layer, selected, projectPath, asset, previewSource, playing, onSelect, onDragTransform } =
-    props;
+  const {
+    layer,
+    selected,
+    projectPath,
+    asset,
+    previewSource,
+    playing,
+    muted = true,
+    volume = 0,
+    onSelect,
+    onDragTransform,
+  } = props;
   const [url, setUrl] = useState<string | null>(null);
   const [poster, setPoster] = useState<string | null>(null);
 
@@ -168,7 +181,8 @@ export function CompositionLayer(props: {
             currentTimeSec={Math.max(0, layer.sourceTimeMs / 1000)}
             playing={playing}
             playbackRate={layer.speed || 1}
-            muted
+            muted={muted || volume <= 0}
+            volume={Math.min(1, Math.max(0, volume))}
             className="program-video"
           />
         ) : (

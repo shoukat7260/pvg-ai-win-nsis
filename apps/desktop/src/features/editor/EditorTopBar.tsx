@@ -1,4 +1,5 @@
 import { formatTimecode } from "@pvg/project-format";
+import { useNavigate } from "react-router-dom";
 import { useEditorStore } from "@/state/editorStore";
 import {
   IconCommand,
@@ -14,6 +15,7 @@ export function EditorTopBar({
   onOpenPalette: () => void;
   onExport?: () => void;
 }) {
+  const navigate = useNavigate();
   const project = useEditorStore((s) => s.project);
   const seq = useEditorStore((s) => s.getActiveSequence());
   const dirty = useEditorStore((s) => s.dirty);
@@ -24,16 +26,27 @@ export function EditorTopBar({
   const setWorkspacePreset = useEditorStore((s) => s.setWorkspacePreset);
   const workspacePreset = useEditorStore((s) => s.workspacePreset);
   const resetWorkspaceLayout = useEditorStore((s) => s.resetWorkspaceLayout);
+  const setRightDockMode = useEditorStore((s) => s.setRightDockMode);
+  const patchPanels = useEditorStore((s) => s.patchPanels);
   const playback = useEditorStore((s) => s.playback);
 
   if (!project || !seq) return null;
 
+  const saveLabel = saving ? "Saving…" : dirty ? "Unsaved changes" : "Saved";
+
   return (
     <header className="ed-topbar" data-testid="editor-topbar">
       <div className="ed-topbar-left">
-        <span className="ed-brand" aria-label="PVG AI">
+        <button
+          type="button"
+          className="ed-brand"
+          aria-label="Back to PVG AI Home"
+          title="Home"
+          onClick={() => navigate("/app/home")}
+          style={{ cursor: "pointer", background: "none", border: "none", color: "inherit" }}
+        >
           PVG AI
-        </span>
+        </button>
         <nav className="ed-breadcrumb" data-testid="project-header" aria-label="Project">
           <span className="ed-crumb strong">{project.name}</span>
           <span className="ed-crumb-sep">/</span>
@@ -44,8 +57,9 @@ export function EditorTopBar({
           <span
             className={`ed-save-pill ${dirty ? "dirty" : "clean"}`}
             data-testid="save-state"
+            title={saveLabel}
           >
-            {saving ? "Saving…" : dirty ? "Unsaved" : "Saved"}
+            {saveLabel}
           </span>
         </nav>
       </div>
@@ -105,6 +119,19 @@ export function EditorTopBar({
           aria-label="Command palette"
         >
           <IconCommand />
+        </button>
+        <button
+          type="button"
+          className="ed-btn ghost"
+          data-testid="ask-pvg-ai"
+          title="Contextual AI. Full chatbot: Workspace → AI."
+          onClick={() => {
+            patchPanels({ rightCollapsed: false });
+            setRightDockMode("ai");
+            setWorkspacePreset("ai");
+          }}
+        >
+          Ask PVG AI
         </button>
         <button
           type="button"

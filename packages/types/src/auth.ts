@@ -60,7 +60,7 @@ export interface LoginRequest {
 
 /** Successful password login — either tokens or MFA challenge. */
 export type LoginResult =
-  | ({ kind: "authenticated" } & TokenPair & { user: AuthUser })
+  | ({ kind: "authenticated" } & TokenPair & { user?: AuthUser })
   | {
       kind: "mfa_required";
       mfaChallengeId: string;

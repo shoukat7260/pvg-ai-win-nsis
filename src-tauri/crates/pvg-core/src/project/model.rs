@@ -276,6 +276,14 @@ pub struct ProjectBundleMeta {
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub description: String,
+    /// Absolute path to a JPEG/PNG cover or derived thumbnail when present.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub thumbnail_path: Option<String>,
+    /// Primary sequence duration in milliseconds.
+    #[serde(default)]
+    pub duration_ms: u64,
+    #[serde(default)]
+    pub trashed: bool,
 }
 
 impl ProjectDocument {
@@ -311,7 +319,42 @@ impl ProjectDocument {
         }
     }
 
+    pub fn primary_duration_ms(&self) -> u64 {
+        self.sequences
+            .first()
+            .map(|s| s.duration_ms.max(0.0) as u64)
+            .unwrap_or(0)
+    }
+
+    pub fn cover_relative_path(&self) -> Option<&str> {
+        self.extra
+            .get("coverRelativePath")
+            .and_then(|v| v.as_str())
+            .filter(|s| !s.is_empty())
+    }
+
+    pub fn set_cover_relative_path(&mut self, relative: Option<String>) {
+        match relative {
+            Some(path) if !path.is_empty() => {
+                self.extra
+                    .insert("coverRelativePath".into(), Value::String(path));
+            }
+            _ => {
+                self.extra.remove("coverRelativePath");
+            }
+        }
+    }
+
     pub fn to_meta(&self, path: impl Into<String>) -> ProjectBundleMeta {
+        self.to_meta_ex(path, None, false)
+    }
+
+    pub fn to_meta_ex(
+        &self,
+        path: impl Into<String>,
+        thumbnail_path: Option<String>,
+        trashed: bool,
+    ) -> ProjectBundleMeta {
         ProjectBundleMeta {
             id: self.id,
             name: self.name.clone(),
@@ -321,6 +364,9 @@ impl ProjectDocument {
             created_at: self.created_at,
             updated_at: self.updated_at,
             description: self.description.clone(),
+            thumbnail_path,
+            duration_ms: self.primary_duration_ms(),
+            trashed,
         }
     }
 

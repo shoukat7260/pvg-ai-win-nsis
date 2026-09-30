@@ -1,6 +1,8 @@
 import { useEditorStore } from "@/state/editorStore";
 import {
   IconAi,
+  IconCaptions,
+  IconColor,
   IconEffects,
   IconHistory,
   IconMedia,
@@ -10,7 +12,15 @@ import {
 } from "./icons/EditorIcons";
 
 const RAIL: Array<{
-  id: "media" | "project" | "text" | "transitions" | "effects" | "history";
+  id:
+    | "media"
+    | "project"
+    | "text"
+    | "transitions"
+    | "effects"
+    | "color"
+    | "history"
+    | "captions";
   label: string;
   shortcut?: string;
   Icon: (p: { className?: string }) => React.ReactElement;
@@ -18,8 +28,10 @@ const RAIL: Array<{
   { id: "media", label: "Media", shortcut: "", Icon: IconMedia },
   { id: "project", label: "Project", Icon: IconProject },
   { id: "text", label: "Text & Shapes", Icon: IconText },
+  { id: "captions", label: "Captions", Icon: IconCaptions },
   { id: "transitions", label: "Transitions", Icon: IconTransition },
   { id: "effects", label: "Effects", Icon: IconEffects },
+  { id: "color", label: "Color", Icon: IconColor },
   { id: "history", label: "History", Icon: IconHistory },
 ];
 

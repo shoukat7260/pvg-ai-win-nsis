@@ -106,6 +106,12 @@ pub fn store_session_refresh(
         .map_err(map_err)
 }
 
+/// Read the session refresh token for silent restore. Never log the secret.
+#[tauri::command]
+pub fn get_session_refresh(state: State<'_, AppState>) -> Result<Option<String>, String> {
+    state.vault.get(SESSION_REFRESH_KEY).map_err(map_err)
+}
+
 #[tauri::command]
 pub fn clear_session_refresh(state: State<'_, AppState>) -> Result<bool, String> {
     state.vault.delete(SESSION_REFRESH_KEY).map_err(map_err)

@@ -265,9 +265,12 @@ export class PvgApiClient {
     body?: { refreshToken?: string },
     options?: RequestOptions,
   ): Promise<TokenPair & { user?: AuthUser }> {
+    const refreshToken = body?.refreshToken;
     const raw = await this.request<unknown>("POST", "/auth/refresh", {
       ...options,
-      body: body ?? {},
+      body: refreshToken
+        ? { refreshToken, refresh_token: refreshToken }
+        : {},
     });
     const tokens = adaptTokenPair(raw);
     const userRaw =

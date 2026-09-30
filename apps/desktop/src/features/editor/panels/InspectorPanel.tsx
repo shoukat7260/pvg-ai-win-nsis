@@ -7,8 +7,10 @@ import {
   SetTransitionCommand,
   AddEffectCommand,
   AddKeyframeCommand,
+  DeleteKeyframeCommand,
   newId,
 } from "@pvg/editor-core";
+import type { EditorCommand } from "@pvg/editor-core";
 import { useEditorStore } from "@/state/editorStore";
 
 export function InspectorPanel() {
@@ -16,6 +18,7 @@ export function InspectorPanel() {
   const selection = useEditorStore((s) => s.selection);
   const dispatch = useEditorStore((s) => s.dispatch);
   const project = useEditorStore((s) => s.project);
+  const playback = useEditorStore((s) => s.playback);
   const [advanced, setAdvanced] = useState(false);
 
   const clips = useMemo(() => {
@@ -143,22 +146,61 @@ export function InspectorPanel() {
               )
             }
           />
-          <button
-            type="button"
-            className="ed-btn ghost"
-            onClick={() =>
-              clips.forEach((c) =>
-                dispatch(
-                  new AddKeyframeCommand(seq.id, c.id, "transform.opacity", {
-                    timeMs: 0,
-                    value: c.transform.opacity,
-                  }),
-                ),
-              )
-            }
-          >
-            ◇ Keyframe opacity
-          </button>
+          <div className="ed-btn-row wrap" data-testid="keyframe-actions">
+            {(
+              [
+                ["transform.x", "X"] as const,
+                ["transform.y", "Y"] as const,
+                ["transform.scaleX", "ScaleX"] as const,
+                ["transform.scaleY", "ScaleY"] as const,
+                ["transform.rotation", "Rot"] as const,
+                ["transform.opacity", "Opacity"] as const,
+              ]
+            ).map(([path, label]) => (
+              <button
+                key={path}
+                type="button"
+                className="ed-btn ghost"
+                title={`Add ${label} keyframe at playhead (clip-local)`}
+                onClick={() =>
+                  clips.forEach((c) => {
+                    const local = Math.max(
+                      0,
+                      playback.currentTimeMs - c.timelineStartMs,
+                    );
+                    const value =
+                      path === "transform.x"
+                        ? c.transform.x
+                        : path === "transform.y"
+                          ? c.transform.y
+                          : path === "transform.scaleX"
+                            ? c.transform.scaleX
+                            : path === "transform.scaleY"
+                              ? c.transform.scaleY
+                              : path === "transform.rotation"
+                                ? c.transform.rotation
+                                : c.transform.opacity;
+                    dispatch(
+                      new AddKeyframeCommand(seq.id, c.id, path, {
+                        timeMs: local,
+                        value,
+                        interpolation: "linear",
+                      }),
+                    );
+                  })
+                }
+              >
+                ◇ {label}
+              </button>
+            ))}
+          </div>
+          {clips.length === 1 && Object.keys(primary.keyframes).length > 0 ? (
+            <KeyframeList
+              clip={primary}
+              sequenceId={seq.id}
+              dispatch={dispatch}
+            />
+          ) : null}
           {advanced ? (
             <>
               <NumField
@@ -321,6 +363,49 @@ export function InspectorPanel() {
           </section>
         ) : null}
       </div>
+    </div>
+  );
+}
+
+function KeyframeList({
+  clip,
+  sequenceId,
+  dispatch,
+}: {
+  clip: Clip;
+  sequenceId: string;
+  dispatch: (cmd: EditorCommand) => void;
+}) {
+  const entries = Object.entries(clip.keyframes).flatMap(([path, list]) =>
+    (list ?? []).map((kf) => ({ path, kf })),
+  );
+  if (entries.length === 0) return null;
+  return (
+    <div className="kf-list" data-testid="keyframe-list">
+      <h4 className="ed-section">Keyframes</h4>
+      <ul className="ed-list">
+        {entries.map(({ path, kf }) => (
+          <li key={kf.id}>
+            <span>
+              {path.replace("transform.", "")} @ {Math.round(kf.timeMs)}ms ={" "}
+              {typeof kf.value === "number" ? kf.value.toFixed(2) : String(kf.value)}
+              {kf.interpolation !== "linear" ? ` · ${kf.interpolation}` : ""}
+            </span>
+            <button
+              type="button"
+              className="ed-btn ghost"
+              aria-label="Delete keyframe"
+              onClick={() =>
+                dispatch(
+                  new DeleteKeyframeCommand(sequenceId, clip.id, path, kf.id),
+                )
+              }
+            >
+              ×
+            </button>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

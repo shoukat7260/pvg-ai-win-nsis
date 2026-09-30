@@ -42,15 +42,24 @@ impl AppState {
         fs::create_dir_all(data.join("users").join("local").join("backups"))?;
         fs::create_dir_all(data.join("users").join("local").join("metadata"))?;
         fs::create_dir_all(self.workspace_root())?;
+        fs::create_dir_all(self.trash_root())?;
         Ok(())
     }
 
     pub fn path_policy(&self) -> PathPolicy {
-        PathPolicy::new(vec![self.data_root(), self.workspace_root()])
+        PathPolicy::new(vec![
+            self.data_root(),
+            self.workspace_root(),
+            self.trash_root(),
+        ])
     }
 
     pub fn workspace_root(&self) -> PathBuf {
         self.workspace_root.read().clone()
+    }
+
+    pub fn trash_root(&self) -> PathBuf {
+        self.data_root().join("users").join("local").join("trash")
     }
 
     pub fn data_root(&self) -> PathBuf {

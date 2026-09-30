@@ -13,6 +13,7 @@ use tauri::Manager;
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_http::init())
         .manage(AppState::new())
         .invoke_handler(tauri::generate_handler![
             commands::project_cmd::create_project,
@@ -21,6 +22,13 @@ pub fn run() {
             commands::project_cmd::read_project_metadata,
             commands::project_cmd::save_project,
             commands::project_cmd::list_workspace_projects,
+            commands::project_cmd::rename_project,
+            commands::project_cmd::duplicate_project,
+            commands::project_cmd::trash_project,
+            commands::project_cmd::restore_project,
+            commands::project_cmd::delete_project_permanent,
+            commands::project_cmd::list_trashed_projects,
+            commands::project_cmd::generate_project_thumbnail,
             commands::workspace_cmd::ensure_local_workspace,
             commands::diagnostics_cmd::get_diagnostics,
             commands::vault_cmd::vault_has_credential,
@@ -31,6 +39,7 @@ pub fn run() {
             commands::vault_cmd::has_provider_credential,
             commands::vault_cmd::list_provider_metadata,
             commands::vault_cmd::store_session_refresh,
+            commands::vault_cmd::get_session_refresh,
             commands::vault_cmd::clear_session_refresh,
             commands::vault_cmd::vault_status_cmd,
             commands::vault_cmd::vault_lock,

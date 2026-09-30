@@ -34,6 +34,10 @@ export interface ProjectMetadata {
   createdAt: string;
   updatedAt: string;
   description: string;
+  /** Absolute filesystem path to cover/thumbnail when available. */
+  thumbnailPath?: string | null;
+  durationMs?: number;
+  trashed?: boolean;
 }
 
 export type ProxyModePreference = "auto" | "proxy" | "original";

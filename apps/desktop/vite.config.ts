@@ -1,5 +1,6 @@
 import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
+import wasm from "vite-plugin-wasm";
 import path from "node:path";
 import fs from "node:fs";
 import type { IncomingMessage, ServerResponse } from "node:http";
@@ -55,7 +56,7 @@ function windowsDownloadsPlugin(): Plugin {
 }
 
 export default defineConfig({
-  plugins: [react(), windowsDownloadsPlugin()],
+  plugins: [react(), wasm(), windowsDownloadsPlugin()],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "src"),
@@ -78,8 +79,12 @@ export default defineConfig({
     },
   },
   envPrefix: ["VITE_", "TAURI_"],
+  optimizeDeps: {
+    exclude: ["opencut-wasm"],
+  },
   build: {
-    target: process.env.TAURI_ENV_PLATFORM === "windows" ? "chrome105" : "safari13",
+    // esnext keeps native top-level await for opencut-wasm (vite-plugin-wasm).
+    target: "esnext",
     minify: !process.env.TAURI_ENV_DEBUG ? "esbuild" : false,
     sourcemap: !!process.env.TAURI_ENV_DEBUG,
   },

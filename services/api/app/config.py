@@ -17,7 +17,8 @@ class Settings(BaseSettings):
     """Typed settings loaded from environment. Production fails closed."""
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        # CWD is typically services/api when run via scripts/run-api.sh — also accept local .env
+        env_file=("../.env", ".env"),
         env_file_encoding="utf-8",
         extra="ignore",
         case_sensitive=False,

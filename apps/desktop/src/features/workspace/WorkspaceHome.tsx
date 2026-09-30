@@ -1,77 +1,56 @@
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { GlassPanel } from "@/components/ui/GlassPanel";
-import { Button } from "@/components/ui/Button";
-import { EmptyState } from "@/components/ui/EmptyState";
-import { ErrorState } from "@/components/ui/ErrorState";
-import { Badge } from "@/components/ui/Badge";
-import { createProjectInputSchema } from "@/lib/schemas";
-import { displayPath } from "@/lib/paths";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { convertFileSrc } from "@tauri-apps/api/core";
 import { projectService } from "@/services/projects";
 import { nativeApi } from "@/services/tauri";
 import { useAppStore } from "@/state/appStore";
-import { useConnectivity } from "@/hooks/useConnectivity";
+import { useToastStore } from "@/components/ToastHost";
+import { CreateProjectDialog } from "@/features/projects/CreateProjectDialog";
+import { isBrowserPreview } from "@/lib/paths";
+import type { ProjectMetadata } from "@/types";
 
-type FramePresetId = "vertical" | "landscape" | "square" | "custom";
+const TOOLS = [
+  { id: "new", title: "New project", desc: "Blank timeline with canvas presets." },
+  { id: "ai-video", title: "AI video", desc: "Describe a clip and generate a plan." },
+  { id: "ugc", title: "UGC ad", desc: "Product → brief → storyboard shell." },
+  { id: "product", title: "Product video", desc: "Showcase products with templates." },
+  { id: "social", title: "Social video", desc: "Vertical-first social presets." },
+  { id: "import", title: "Import media", desc: "Bring local files into Library." },
+] as const;
 
-const FRAME_PRESETS: Record<
-  Exclude<FramePresetId, "custom">,
-  { label: string; width: number; height: number }
-> = {
-  vertical: { label: "Vertical 1080×1920", width: 1080, height: 1920 },
-  landscape: { label: "Landscape 1920×1080", width: 1920, height: 1080 },
-  square: { label: "Square 1080×1080", width: 1080, height: 1080 },
-};
-
-const FPS_OPTIONS = [24, 25, 30, 48, 50, 60] as const;
-
-/**
- * create_project IPC currently accepts name / workspaceId / description only.
- * Frame size + fps are encoded into description until project settings are
- * accepted on create (UI-only persistence via description string).
- */
-function buildCreateDescription(
-  preset: FramePresetId,
-  width: number,
-  height: number,
-  fps: number,
-): string {
-  const label =
-    preset === "custom"
-      ? `Custom ${width}x${height}`
-      : FRAME_PRESETS[preset].label;
-  return `Phase 3 project · preset=${label} · fps=${fps} (settings applied via description until create API accepts ProjectSettings)`;
+function formatWhen(iso?: string | null) {
+  if (!iso) return "—";
+  try {
+    return new Date(iso).toLocaleString();
+  } catch {
+    return iso;
+  }
 }
 
 export function WorkspaceHome() {
   const navigate = useNavigate();
+  const [params, setParams] = useSearchParams();
   const queryClient = useQueryClient();
   const workspace = useAppStore((s) => s.currentWorkspace);
   const setWorkspace = useAppStore((s) => s.setWorkspace);
   const setUser = useAppStore((s) => s.setUser);
   const setProject = useAppStore((s) => s.setProject);
-  const currentProject = useAppStore((s) => s.currentProject);
-  const connectivity = useConnectivity();
-  const [name, setName] = useState("");
-  const [formError, setFormError] = useState<string | null>(null);
-  const [preset, setPreset] = useState<FramePresetId>("landscape");
-  const [customWidth, setCustomWidth] = useState(1920);
-  const [customHeight, setCustomHeight] = useState(1080);
-  const [fps, setFps] = useState<number>(30);
+  const pushToast = useToastStore((s) => s.push);
+  const [createOpen, setCreateOpen] = useState(params.get("create") === "1");
+  const [toolNotice, setToolNotice] = useState<string | null>(null);
+  const workspaceReadyToasted = useRef(false);
 
-  const openInEditor = (project: typeof currentProject) => {
-    if (!project) return;
-    setProject(project);
-    navigate("/app/edit");
-  };
+  useEffect(() => {
+    if (params.get("create") === "1") setCreateOpen(true);
+  }, [params]);
 
   const bootstrap = useMutation({
     mutationFn: () => nativeApi.ensureLocalWorkspace(),
     onSuccess: (info) => {
       setUser({
         id: info.userId,
-        displayName: "Local Foundation User",
+        displayName: "Local workspace",
         isFoundationPlaceholder: true,
       });
       setWorkspace({
@@ -81,8 +60,20 @@ export function WorkspaceHome() {
         dataRoot: info.dataRoot,
       });
       void queryClient.invalidateQueries({ queryKey: ["projects"] });
+      if (!workspaceReadyToasted.current) {
+        workspaceReadyToasted.current = true;
+        pushToast("Workspace ready", "success");
+      }
     },
   });
+
+  useEffect(() => {
+    if (!workspace && !bootstrap.isPending && !bootstrap.isSuccess) {
+      bootstrap.mutate();
+    }
+    // Intentionally once on mount when workspace missing
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workspace?.id]);
 
   const projectsQuery = useQuery({
     queryKey: ["projects", workspace?.id],
@@ -90,261 +81,173 @@ export function WorkspaceHome() {
     queryFn: () => projectService.list(),
   });
 
-  const createMutation = useMutation({
-    mutationFn: async () => {
-      const dims =
-        preset === "custom"
-          ? { width: customWidth, height: customHeight }
-          : FRAME_PRESETS[preset];
-      const description = buildCreateDescription(
-        preset,
-        dims.width,
-        dims.height,
-        fps,
-      );
-      const parsed = createProjectInputSchema.safeParse({
-        name,
-        workspaceId: workspace?.id ?? "",
-        description,
-      });
-      if (!parsed.success) {
-        throw new Error(parsed.error.issues[0]?.message ?? "Invalid project");
-      }
-      return projectService.create(
-        parsed.data.name,
-        parsed.data.workspaceId,
-        parsed.data.description,
-      );
-    },
-    onSuccess: (project) => {
-      setName("");
-      setFormError(null);
-      setProject(project);
-      void queryClient.invalidateQueries({ queryKey: ["projects"] });
-      navigate("/app/edit");
-    },
-    onError: (err: Error) => setFormError(err.message),
-  });
+  const recent = useMemo(() => {
+    const list = projectsQuery.data ?? [];
+    return [...list]
+      .sort((a, b) => String(b.updatedAt ?? "").localeCompare(String(a.updatedAt ?? "")))
+      .slice(0, 8);
+  }, [projectsQuery.data]);
+
+  const openProject = (project: ProjectMetadata) => {
+    setProject(project);
+    navigate("/app/edit");
+  };
+
+  const onTool = (id: (typeof TOOLS)[number]["id"]) => {
+    if (id === "new") {
+      setCreateOpen(true);
+      return;
+    }
+    if (id === "import") {
+      navigate("/app/media");
+      return;
+    }
+    if (id === "ai-video" || id === "ugc") {
+      navigate(`/app/ai?intent=${id}`);
+      return;
+    }
+    setToolNotice("Not yet available — coming in a later phase.");
+  };
 
   return (
-    <div className="mx-auto flex max-w-4xl flex-col gap-8">
-      <header className="space-y-3">
-        <Badge tone="accent">Phase 3 · Media foundation</Badge>
-        <h1 className="font-display text-3xl font-semibold tracking-tight text-charcoal-100">
-          Creative workstation foundation
-        </h1>
-        <p className="max-w-2xl text-sm leading-relaxed text-charcoal-300">
-          Local workspace, project presets, and media import — no timeline editor
-          yet. Choose a frame size when creating a project.
+    <div data-testid="workspace-home">
+      <button
+        type="button"
+        className="pvg-create-hero"
+        onClick={() => setCreateOpen(true)}
+        data-testid="home-create-project"
+      >
+        + Create project
+      </button>
+
+      <div className="pvg-tool-row">
+        {TOOLS.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            className="pvg-tool-card"
+            onClick={() => onTool(t.id)}
+            data-testid={`home-tool-${t.id}`}
+          >
+            <span className="pvg-tool-card__title">{t.title}</span>
+            <span className="pvg-tool-card__desc">{t.desc}</span>
+          </button>
+        ))}
+      </div>
+      {toolNotice ? (
+        <p style={{ marginTop: 10, fontSize: 12, color: "var(--pvg-warning)" }} role="status">
+          {toolNotice}
         </p>
-        <p className="text-xs text-charcoal-500">{connectivity.label}</p>
-      </header>
+      ) : null}
+
+      <div className="pvg-section-head">
+        <h2>Recent projects</h2>
+        <button
+          type="button"
+          className="pvg-btn pvg-btn--ghost"
+          onClick={() => navigate("/app/projects")}
+        >
+          View all
+        </button>
+      </div>
 
       {!workspace ? (
-        <GlassPanel className="p-6">
-          <EmptyState
-            title="No local workspace yet"
-            description="Create a local test workspace under the PVG data root. Metadata persists through Tauri commands."
-            action={
-              <Button
-                onClick={() => bootstrap.mutate()}
-                disabled={bootstrap.isPending}
-                data-testid="create-workspace"
-              >
-                {bootstrap.isPending ? "Creating…" : "Create local test workspace"}
-              </Button>
-            }
-          />
+        <div className="pvg-empty">
+          <h3>Preparing local workspace…</h3>
+          <p>PVG AI stores projects and media on this device.</p>
           {bootstrap.isError ? (
-            <div className="mt-4">
-              <ErrorState
-                message={(bootstrap.error as Error).message}
-                onRetry={() => bootstrap.mutate()}
-              />
-            </div>
+            <button type="button" className="pvg-btn pvg-btn--primary" onClick={() => bootstrap.mutate()}>
+              Retry
+            </button>
           ) : null}
-        </GlassPanel>
+        </div>
+      ) : projectsQuery.isLoading ? (
+        <p style={{ color: "var(--pvg-text-muted)", fontSize: 13 }}>Loading projects…</p>
+      ) : projectsQuery.isError ? (
+        <div className="pvg-empty">
+          <h3>Could not load projects</h3>
+          <p>{(projectsQuery.error as Error).message}</p>
+          <button
+            type="button"
+            className="pvg-btn pvg-btn--primary"
+            onClick={() => void projectsQuery.refetch()}
+          >
+            Retry
+          </button>
+        </div>
+      ) : recent.length === 0 ? (
+        <div className="pvg-empty" data-testid="home-empty-projects">
+          <h3>Create your first project</h3>
+          <p>Projects stay on this device. Open the editor when you are ready to cut.</p>
+          <button
+            type="button"
+            className="pvg-btn pvg-btn--primary"
+            onClick={() => setCreateOpen(true)}
+          >
+            New project
+          </button>
+        </div>
       ) : (
-        <>
-          <GlassPanel className="grid gap-4 p-6 md:grid-cols-2">
-            <div>
-              <p className="text-xs uppercase tracking-[0.14em] text-charcoal-500">
-                Workspace
-              </p>
-              <p className="mt-1 font-display text-lg font-semibold">
-                {workspace.displayName}
-              </p>
-              <p className="mt-2 font-mono text-xs text-charcoal-400" title={workspace.projectsRoot}>
-                {displayPath(workspace.projectsRoot, 72)}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs uppercase tracking-[0.14em] text-charcoal-500">
-                Active project
-              </p>
-              <p className="mt-1 text-sm text-charcoal-200">
-                {currentProject?.name ?? "None selected"}
-              </p>
-            </div>
-          </GlassPanel>
-
-          <GlassPanel className="p-6">
-            <h2 className="font-display text-lg font-semibold">Create project</h2>
-            <p className="mt-1 text-sm text-charcoal-400">
-              Frame presets and fps are recorded in the project description until
-              create_project accepts settings natively.
-            </p>
-            <form
-              className="mt-4 flex flex-col gap-4"
-              onSubmit={(e) => {
-                e.preventDefault();
-                createMutation.mutate();
-              }}
-            >
-              <input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Project name"
-                className="pvg-input pvg-input--light outline-none"
-                data-testid="project-name-input"
-              />
-
-              <div>
-                <p className="mb-2 text-[10px] font-medium uppercase tracking-[0.14em] text-charcoal-500">
-                  Frame preset
-                </p>
-                <div className="flex flex-wrap gap-2" data-testid="project-presets">
-                  {(Object.keys(FRAME_PRESETS) as Exclude<FramePresetId, "custom">[]).map(
-                    (id) => (
-                      <button
-                        key={id}
-                        type="button"
-                        onClick={() => setPreset(id)}
-                        className={`rounded-xl border px-3 py-2 text-xs transition ${
-                          preset === id
-                            ? "border-accent/40 bg-accent-mute text-accent-bright"
-                            : "border-white/10 text-charcoal-300 hover:bg-white/5"
-                        }`}
-                        data-testid={`preset-${id}`}
-                      >
-                        {FRAME_PRESETS[id].label}
-                      </button>
-                    ),
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => setPreset("custom")}
-                    className={`rounded-xl border px-3 py-2 text-xs transition ${
-                      preset === "custom"
-                        ? "border-accent/40 bg-accent-mute text-accent-bright"
-                        : "border-white/10 text-charcoal-300 hover:bg-white/5"
-                    }`}
-                    data-testid="preset-custom"
-                  >
-                    Custom
-                  </button>
-                </div>
-              </div>
-
-              {preset === "custom" ? (
-                <div className="flex flex-wrap gap-3" data-testid="custom-dimensions">
-                  <label className="text-xs text-charcoal-400">
-                    Width
-                    <input
-                      type="number"
-                      min={16}
-                      max={7680}
-                      value={customWidth}
-                      onChange={(e) => setCustomWidth(Number(e.target.value) || 1920)}
-                      className="mt-1 block w-28 rounded-xl border border-white/10 bg-charcoal-900 px-3 py-2 text-sm text-charcoal-100"
-                    />
-                  </label>
-                  <label className="text-xs text-charcoal-400">
-                    Height
-                    <input
-                      type="number"
-                      min={16}
-                      max={7680}
-                      value={customHeight}
-                      onChange={(e) => setCustomHeight(Number(e.target.value) || 1080)}
-                      className="mt-1 block w-28 rounded-xl border border-white/10 bg-charcoal-900 px-3 py-2 text-sm text-charcoal-100"
-                    />
-                  </label>
-                </div>
-              ) : null}
-
-              <label className="text-xs text-charcoal-400">
-                Frame rate
-                <select
-                  value={fps}
-                  onChange={(e) => setFps(Number(e.target.value))}
-                  className="mt-1 block w-36 rounded-xl border border-white/10 bg-charcoal-900 px-3 py-2 text-sm text-charcoal-100"
-                  data-testid="project-fps"
+        <div className="pvg-project-grid" data-testid="home-recent-projects">
+          {recent.map((p) => {
+            let src: string | null = null;
+            if (p.thumbnailPath && !isBrowserPreview()) {
+              try {
+                src = convertFileSrc(p.thumbnailPath);
+              } catch {
+                src = null;
+              }
+            }
+            return (
+              <button
+                key={p.path}
+                type="button"
+                className="pvg-project-card"
+                onClick={() => openProject(p)}
+                data-testid="project-card"
+              >
+                <div
+                  className="pvg-project-card__thumb"
+                  style={
+                    src
+                      ? {
+                          backgroundImage: `url(${src})`,
+                          backgroundSize: "cover",
+                          backgroundPosition: "center",
+                        }
+                      : undefined
+                  }
                 >
-                  {FPS_OPTIONS.map((v) => (
-                    <option key={v} value={v}>
-                      {v} fps
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <div className="flex justify-end">
-                <Button type="submit" disabled={createMutation.isPending} data-testid="create-project">
-                  {createMutation.isPending ? "Creating…" : "Create"}
-                </Button>
-              </div>
-            </form>
-            {formError || createMutation.isError ? (
-              <div className="mt-3">
-                <ErrorState message={formError ?? (createMutation.error as Error).message} />
-              </div>
-            ) : null}
-          </GlassPanel>
-
-          <section>
-            <h2 className="mb-3 font-display text-lg font-semibold">Projects</h2>
-            {projectsQuery.isLoading ? (
-              <p className="text-sm text-charcoal-400 animate-soft-pulse">Loading projects…</p>
-            ) : null}
-            {projectsQuery.isError ? (
-              <ErrorState
-                message={(projectsQuery.error as Error).message}
-                onRetry={() => void projectsQuery.refetch()}
-              />
-            ) : null}
-            {projectsQuery.data && projectsQuery.data.projects.length === 0 ? (
-              <EmptyState
-                title="No projects yet"
-                description="Create a local .pvg bundle to persist foundation metadata."
-              />
-            ) : null}
-            <ul className="space-y-2">
-              {projectsQuery.data?.projects.map((project) => (
-                <li key={project.id}>
-                  <button
-                    type="button"
-                    className="flex w-full items-center justify-between rounded-surface border border-white/[0.06] bg-charcoal-900/50 px-4 py-3 text-left transition hover:border-accent/30"
-                    onClick={() => openInEditor(project)}
-                    data-testid={`project-${project.id}`}
-                  >
-                    <div>
-                      <p className="font-medium text-charcoal-100">{project.name}</p>
-                      <p className="mt-0.5 font-mono text-[11px] text-charcoal-500">
-                        {displayPath(project.path, 56)}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge>v{project.schemaVersion}</Badge>
-                      <span className="text-xs text-accent-bright">Open editor</span>
-                    </div>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </section>
-        </>
+                  {!src ? "PVG" : null}
+                </div>
+                <div className="pvg-project-card__body">
+                  <div className="pvg-project-card__name">{p.name}</div>
+                  <div className="pvg-project-card__meta">{formatWhen(p.updatedAt)}</div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
       )}
+
+      {createOpen && workspace ? (
+        <CreateProjectDialog
+          workspaceId={workspace.id}
+          onClose={() => {
+            setCreateOpen(false);
+            if (params.get("create") === "1") {
+              params.delete("create");
+              setParams(params, { replace: true });
+            }
+          }}
+          onCreated={(project) => {
+            setProject(project);
+            void queryClient.invalidateQueries({ queryKey: ["projects"] });
+            setCreateOpen(false);
+            navigate("/app/edit");
+          }}
+        />
+      ) : null}
     </div>
   );
 }

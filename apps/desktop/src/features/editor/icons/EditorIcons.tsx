@@ -74,12 +74,31 @@ export function IconEffects(p: IconProps) {
   );
 }
 
+export function IconColor(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <circle cx="8" cy="8" r="5.5" {...stroke} />
+      <path d="M8 2.5v11M2.5 8h11" {...stroke} />
+      <path d="M4.2 4.2 11.8 11.8M11.8 4.2 4.2 11.8" {...stroke} />
+    </Svg>
+  );
+}
+
 export function IconHistory(p: IconProps) {
   return (
     <Svg {...p}>
       <path d="M3.5 8a4.5 4.5 0 1 0 1.2-3" {...stroke} />
       <path d="M3.5 3.5v3h3" {...stroke} />
       <path d="M8 5.5V8l1.8 1.2" {...stroke} />
+    </Svg>
+  );
+}
+
+export function IconCaptions(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <rect x="2" y="3.5" width="12" height="9" rx="1.5" {...stroke} />
+      <path d="M4.5 11h7M5.5 8.5h2M8.5 8.5h2" {...stroke} />
     </Svg>
   );
 }

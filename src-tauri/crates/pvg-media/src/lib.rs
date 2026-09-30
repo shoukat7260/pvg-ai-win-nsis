@@ -16,7 +16,9 @@ pub mod thumbnail;
 pub mod waveform;
 
 pub use error::{MediaError, MediaResult};
-pub use export::{export_sequence_mp4, ExportPreset, ExportResult, RENDERS_DIR};
+pub use export::{
+    evaluate_keyframes, export_sequence_mp4, ExportPreset, ExportResult, RENDERS_DIR,
+};
 pub use ffmpeg::{
     command_with_args, locate_ffmpeg, locate_ffprobe, run_checked, validate_arg_path, ArgvBuilder,
 };

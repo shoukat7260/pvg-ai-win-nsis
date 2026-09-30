@@ -4,10 +4,13 @@ import { useEditorStore } from "@/state/editorStore";
 import { useAppStore } from "@/state/appStore";
 import { useMediaStore } from "@/state/mediaStore";
 import { CompositionLayer } from "@/features/editor/media/CompositionLayer";
+import { ProgramAudioBus } from "@/features/editor/media/ProgramAudioBus";
 
 /**
  * Program monitor — multi-layer composition from composeAtTime.
  * Playback clock: editorStore.playback.currentTimeMs.
+ * Audio: video layers unmute when volume > 0 and no overlapping dedicated audio
+ * track for the same asset; audio tracks play via ProgramAudioBus.
  */
 export function CanvasViewer() {
   const seq = useEditorStore((s) => s.getActiveSequence());
@@ -25,12 +28,26 @@ export function CanvasViewer() {
   const previewSource = useMediaStore((s) => s.previewSource);
   const mediaAssets = useMediaStore((s) => s.assets);
 
-  const layers = useMemo(() => {
+  const allLayers = useMemo(() => {
     if (!seq) return [];
-    return composeAtTime(seq, playback.currentTimeMs).filter(
-      (l) => l.trackType !== "audio",
-    );
+    return composeAtTime(seq, playback.currentTimeMs);
   }, [seq, playback.currentTimeMs]);
+
+  const visualLayers = useMemo(
+    () => allLayers.filter((l) => l.trackType !== "audio" && l.kind !== "audio"),
+    [allLayers],
+  );
+
+  /** Asset IDs already covered by dedicated audio tracks at this time. */
+  const dedicatedAudioAssets = useMemo(() => {
+    const set = new Set<string>();
+    for (const l of allLayers) {
+      if ((l.trackType === "audio" || l.kind === "audio") && l.assetId) {
+        set.add(l.assetId);
+      }
+    }
+    return set;
+  }, [allLayers]);
 
   useEffect(() => {
     if (!playback.playing || !seq) return;
@@ -60,14 +77,19 @@ export function CanvasViewer() {
   const aspect = seq.width / seq.height;
   const frameMs = 1000 / seq.frameRate;
 
+  const resolveAsset = (assetId: string) =>
+    mediaAssets.find((a) => a.id === assetId) ??
+    project?.assets?.find((a) => a.id === assetId) ??
+    null;
+
   return (
     <div className="canvas-root" data-testid="canvas-viewer">
       <div className="canvas-toolbar">
         <div className="canvas-toolbar-left">
           <span className="ed-chip">Program</span>
           <span className="ed-muted">
-            {seq.width}×{seq.height} · {layers.length} layer
-            {layers.length === 1 ? "" : "s"}
+            {seq.width}×{seq.height} · {visualLayers.length} layer
+            {visualLayers.length === 1 ? "" : "s"}
           </span>
         </div>
         <div className="canvas-toolbar-right">
@@ -111,12 +133,12 @@ export function CanvasViewer() {
         >
           <div className="canvas-safe title" aria-hidden />
           <div className="canvas-safe action" aria-hidden />
-          {layers.map((layer) => {
-            const asset =
-              (layer.assetId &&
-                (mediaAssets.find((a) => a.id === layer.assetId) ??
-                  project?.assets?.find((a) => a.id === layer.assetId))) ||
-              null;
+          {visualLayers.map((layer) => {
+            const asset = (layer.assetId && resolveAsset(layer.assetId)) || null;
+            const useEmbeddedAudio =
+              layer.kind === "video" &&
+              layer.volume > 0 &&
+              !(layer.assetId && dedicatedAudioAssets.has(layer.assetId));
             return (
               <CompositionLayer
                 key={layer.clipId}
@@ -126,6 +148,8 @@ export function CanvasViewer() {
                 asset={asset}
                 previewSource={previewSource}
                 playing={playback.playing}
+                muted={!useEmbeddedAudio}
+                volume={useEmbeddedAudio ? layer.volume : 0}
                 onSelect={() => setSelection({ clipIds: [layer.clipId] })}
                 onDragTransform={(dx, dy) => {
                   if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return;
@@ -139,11 +163,18 @@ export function CanvasViewer() {
               />
             );
           })}
-          {layers.length === 0 ? (
+          {visualLayers.length === 0 ? (
             <p className="canvas-empty">Import media or add text to begin editing.</p>
           ) : null}
         </div>
       </div>
+      <ProgramAudioBus
+        layers={allLayers}
+        projectPath={projectPath}
+        assetLookup={resolveAsset}
+        previewSource={previewSource}
+        playing={playback.playing}
+      />
     </div>
   );
 }

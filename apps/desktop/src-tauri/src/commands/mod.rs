@@ -1,10 +1,10 @@
-mod diagnostics_cmd;
-mod media_cmd;
-mod progress;
-mod project_cmd;
-mod recovery_cmd;
-mod vault_cmd;
-mod workspace_cmd;
+pub mod diagnostics_cmd;
+pub mod media_cmd;
+pub mod progress;
+pub mod project_cmd;
+pub mod recovery_cmd;
+pub mod vault_cmd;
+pub mod workspace_cmd;
 
 pub use diagnostics_cmd::*;
 pub use media_cmd::*;

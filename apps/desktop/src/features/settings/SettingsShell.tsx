@@ -8,6 +8,7 @@ const TABS = [
   { to: "/app/settings/connections", label: "Connections" },
   { to: "/app/settings/billing", label: "Billing" },
   { to: "/app/settings/preferences", label: "Preferences" },
+  { to: "/app/settings/shortcuts", label: "Keyboard Shortcuts" },
 ] as const;
 
 export function SettingsShell() {
@@ -21,7 +22,7 @@ export function SettingsShell() {
       <header>
         <h1 className="font-display text-3xl font-semibold tracking-tight">Settings</h1>
         <p className="mt-2 text-sm text-charcoal-400">
-          Account, security, device-scoped connections, and billing.
+          Account, security, connections, billing, preferences, and shortcuts.
         </p>
       </header>
 

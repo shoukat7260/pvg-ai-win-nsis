@@ -12,6 +12,8 @@ export const vaultService = {
   listProviderMetadata: () => nativeApi.listProviderMetadata(),
   storeSessionRefresh: (refreshToken: string) =>
     nativeApi.storeSessionRefresh(refreshToken),
+  /** Returns refresh token for silent session restore. Never log the value. */
+  getSessionRefresh: () => nativeApi.getSessionRefresh(),
   clearSessionRefresh: () => nativeApi.clearSessionRefresh(),
   hasSessionRefresh: () => nativeApi.vaultHasCredential("session.refresh"),
   status: () => nativeApi.vaultStatus(),

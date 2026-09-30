@@ -1,8 +1,30 @@
 # PHASE 4.2D — Windows UAT checklist
 
+**Status gate:** READY FOR USER ACCEPTANCE — hotfix installer **0.1.1** published  
+**WINDOWS MANUAL UAT:** PENDING (complete this checklist; do not auto-approve)
+
 **Audience:** Human tester on Windows 10/11 x64  
 **Source code on Windows:** NOT required  
-**Installer:** `PVG-AI-Setup-x64.exe` from browser download or Actions artifact
+**Installer:** `PVG-AI-Setup-x64.exe` from browser `/app/edit` → **Download for Windows**
+
+**Published build (confirm from UI):**
+- Version: **0.1.1**
+- SHA-256: `5ced74048b13e695ab1b9279daab6705fe7677ed7092b7891df77f65256d8216`
+- Size: ~4.8 MB (5,023,908 bytes)
+- Architecture: x64
+
+## Hotfix focus (must pass)
+
+| ID | Action | Expected | Pass? |
+|----|--------|----------|-------|
+| H1 | Uninstall previous PVG AI; delete old desktop shortcut | Clean slate (avoids Windows icon cache confusion) | ☐ |
+| H2 | Download **0.1.1** installer; verify SHA-256 | Matches UI / PowerShell `Get-FileHash` | ☐ |
+| H3 | Install + desktop shortcut / Start Menu icon | PVG mountain mark (not black square) | ☐ |
+| H4 | Taskbar / window icon while running | Branded icon | ☐ |
+| H5 | Sign in with **valid** credentials | Reaches VPS API; workspace opens (not “Failed to fetch”) | ☐ |
+| H6 | Invalid password | “Your email or password is incorrect.” (or equivalent safe auth error) | ☐ |
+| H7 | Disconnect network and sign in | Clear network/connectivity error | ☐ |
+| H8 | Logout / relaunch / login again | Session behavior correct | ☐ |
 
 ## Before you start
 

@@ -57,8 +57,10 @@ packages/*/dist/
 .turbo/
 
 # Windows release binaries live on the VPS release path; do not ignore release.json template
-# Large installers may be fetched via scripts/fetch-windows-release.sh
+# Large installers may be fetched via scripts/fetch-windows-release.sh / stage-windows-artifact-from-run.sh
 artifacts/windows/*.exe
+artifacts/windows/*.sha256
+artifacts/windows/release.json
 artifacts/windows/.verified-*
 !artifacts/windows/README.md
 !artifacts/windows/.gitkeep

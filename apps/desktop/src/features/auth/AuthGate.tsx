@@ -1,11 +1,12 @@
 import { useEffect } from "react";
 import { useAuthStore } from "@/auth/authStore";
 import { LoginScreen } from "./LoginScreen";
+import { SignupScreen } from "./SignupScreen";
 import { WaitingForSignIn } from "./WaitingForSignIn";
 import { MfaChallengeScreen } from "./MfaChallengeScreen";
 
 /**
- * Auth gate: UNKNOWN → bootstrap; then login / MFA / waiting / authenticated outlet.
+ * Auth gate: UNKNOWN → bootstrap; then login / signup / MFA / waiting / authenticated outlet.
  * Never flash private content before auth status resolves.
  */
 export function AuthGate({ children }: { children: React.ReactNode }) {
@@ -22,10 +23,11 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   if (status === "UNKNOWN") {
     return (
       <div
-        className="flex min-h-screen items-center justify-center bg-charcoal-950 text-sm text-charcoal-400"
+        className="pvg-auth"
         data-testid="auth-bootstrapping"
+        style={{ color: "var(--pvg-text-muted)", fontSize: 13 }}
       >
-        Checking session…
+        Restoring session…
       </div>
     );
   }
@@ -39,6 +41,9 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   }
   if (view === "waiting_browser" || view === "browser_failed") {
     return <WaitingForSignIn />;
+  }
+  if (view === "signup") {
+    return <SignupScreen />;
   }
 
   return <LoginScreen />;

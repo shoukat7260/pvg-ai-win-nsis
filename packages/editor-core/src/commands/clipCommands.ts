@@ -321,6 +321,21 @@ export class AddMarkerCommand extends SequenceCommand {
   }
 }
 
+export class RemoveMarkerCommand extends SequenceCommand {
+  readonly label = "Removed Marker";
+  constructor(
+    sequenceId: string,
+    private readonly markerId: string,
+  ) {
+    super(sequenceId);
+  }
+  protected apply(seq: Sequence): Sequence {
+    const next = structuredClone(seq);
+    next.markers = next.markers.filter((m) => m.id !== this.markerId);
+    return next;
+  }
+}
+
 export class SetTransformCommand extends SequenceCommand {
   readonly label = "Changed Transform";
   constructor(

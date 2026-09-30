@@ -31,6 +31,28 @@ const previewAssets = new Map<string, ProjectAssetDto[]>();
 const previewJobs: JobSnapshot[] = [];
 /** Full project documents for browser preview editor. */
 const previewDocuments = new Map<string, Record<string, unknown>>();
+const previewTrash = new Map<string, Record<string, unknown>>();
+
+function previewMeta(
+  doc: Record<string, unknown>,
+  path: string,
+  trashed = false,
+  nowOverride?: string,
+) {
+  return {
+    id: doc.id,
+    name: doc.name,
+    path,
+    workspaceId: doc.workspaceId,
+    schemaVersion: doc.schemaVersion ?? 3,
+    createdAt: doc.createdAt,
+    updatedAt: nowOverride ?? doc.updatedAt,
+    description: doc.description ?? "",
+    thumbnailPath: doc.thumbnailPath ?? null,
+    durationMs: doc.durationMs ?? 0,
+    trashed,
+  };
+}
 
 function makePreviewDocument(
   name: string,
@@ -225,6 +247,9 @@ function browserFallback<T>(cmd: string, args?: Record<string, unknown>): T {
         createdAt: now,
         updatedAt: now,
         description,
+        thumbnailPath: null,
+        durationMs: 0,
+        trashed: false,
       } as T;
     }
     case "open_project":
@@ -282,6 +307,93 @@ function browserFallback<T>(cmd: string, args?: Record<string, unknown>): T {
         description: saved.description ?? "",
       } as T;
     }
+
+    case "rename_project": {
+      const input = (args as { input?: { path?: string; name?: string } })?.input;
+      const path = String(input?.path ?? "");
+      const name = String(input?.name ?? "").trim();
+      if (!path || !name) throw new Error("path and name are required");
+      if (name.includes("..") || name.includes("/") || name.includes("\\")) {
+        throw new Error("invalid input: project name contains illegal path characters");
+      }
+      const doc = previewDocuments.get(path) ?? previewTrash.get(path);
+      if (!doc) throw new Error(`project not found: ${path}`);
+      const nextPath = `/tmp/PVG/users/local/projects/${name.replace(/ /g, "-")}.pvg`;
+      const updated: Record<string, unknown> = {
+        ...doc,
+        name,
+        updatedAt: now,
+        _previewPath: nextPath,
+      };
+      previewDocuments.delete(path);
+      previewTrash.delete(path);
+      previewDocuments.set(nextPath, updated);
+      return previewMeta(updated, nextPath, false, now) as T;
+    }
+    case "duplicate_project": {
+      const input = (args as { input?: { path?: string; name?: string } })?.input;
+      const path = String(input?.path ?? "");
+      const src = previewDocuments.get(path);
+      if (!src) throw new Error(`project not found: ${path}`);
+      const name = String(input?.name ?? `${String(src.name)} Copy`).trim() || "Copy";
+      const nextPath = `/tmp/PVG/users/local/projects/${name.replace(/ /g, "-")}.pvg`;
+      const id = crypto.randomUUID?.() ?? `dup-${Date.now()}`;
+      const dup: Record<string, unknown> = {
+        ...structuredClone(src),
+        id,
+        name,
+        createdAt: now,
+        updatedAt: now,
+        _previewPath: nextPath,
+      };
+      previewDocuments.set(nextPath, dup);
+      return previewMeta(dup, nextPath, false, now) as T;
+    }
+    case "trash_project": {
+      const path = String((args as { input?: { path?: string } })?.input?.path ?? "");
+      const doc = previewDocuments.get(path);
+      if (!doc) throw new Error(`project not found: ${path}`);
+      previewDocuments.delete(path);
+      const trashPath = `/tmp/PVG/users/local/trash/${path.split("/").pop()}`;
+      const moved: Record<string, unknown> = { ...doc, _previewPath: trashPath };
+      previewTrash.set(trashPath, moved);
+      return previewMeta(moved, trashPath, true) as T;
+    }
+    case "restore_project": {
+      const path = String((args as { input?: { path?: string } })?.input?.path ?? "");
+      const doc = previewTrash.get(path);
+      if (!doc) throw new Error(`project not found: ${path}`);
+      previewTrash.delete(path);
+      const name = String(doc.name ?? "Restored");
+      const nextPath = `/tmp/PVG/users/local/projects/${name.replace(/ /g, "-")}.pvg`;
+      const restored: Record<string, unknown> = { ...doc, _previewPath: nextPath };
+      previewDocuments.set(nextPath, restored);
+      return previewMeta(restored, nextPath, false, now) as T;
+    }
+    case "delete_project_permanent": {
+      const path = String((args as { input?: { path?: string } })?.input?.path ?? "");
+      if (!previewTrash.has(path)) {
+        throw new Error("permanent delete is only allowed for trashed projects");
+      }
+      previewTrash.delete(path);
+      return true as T;
+    }
+    case "list_trashed_projects": {
+      const projects = [...previewTrash.entries()].map(([p, doc]) =>
+        previewMeta(doc, p, true),
+      );
+      return { workspaceRoot: "/tmp/PVG/users/local/trash", projects } as T;
+    }
+    case "generate_project_thumbnail": {
+      const path = String((args as { input?: { path?: string } })?.input?.path ?? "");
+      const doc = previewDocuments.get(path) ?? previewTrash.get(path);
+      if (!doc) throw new Error(`project not found: ${path}`);
+      const thumb = `preview://thumb/${encodeURIComponent(path)}`;
+      doc.thumbnailPath = thumb;
+      doc.updatedAt = now;
+      return previewMeta(doc, path, previewTrash.has(path), now) as T;
+    }
+
     case "list_workspace_projects": {
       const projects = [...previewDocuments.entries()].map(([path, doc]) => ({
         id: doc.id,
@@ -361,6 +473,8 @@ function browserFallback<T>(cmd: string, args?: Record<string, unknown>): T {
       previewVault.set("session.refresh", { secret: token, label: "Session refresh" });
       return undefined as T;
     }
+    case "get_session_refresh":
+      return (previewVault.get("session.refresh")?.secret ?? null) as T;
     case "clear_session_refresh":
       return previewVault.delete("session.refresh") as T;
     case "vault_status_cmd":
@@ -579,6 +693,31 @@ export const nativeApi = {
       "list_workspace_projects",
     ),
 
+  listTrashedProjects: () =>
+    invokeCommand<{ workspaceRoot: string; projects: ProjectMetadata[] }>(
+      "list_trashed_projects",
+    ),
+
+  renameProject: (path: string, name: string) =>
+    invokeCommand<ProjectMetadata>("rename_project", { input: { path, name } }),
+
+  duplicateProject: (path: string, name?: string) =>
+    invokeCommand<ProjectMetadata>("duplicate_project", { input: { path, name } }),
+
+  trashProject: (path: string) =>
+    invokeCommand<ProjectMetadata>("trash_project", { input: { path } }),
+
+  restoreProject: (path: string) =>
+    invokeCommand<ProjectMetadata>("restore_project", { input: { path } }),
+
+  deleteProjectPermanent: (path: string) =>
+    invokeCommand<boolean>("delete_project_permanent", { input: { path } }),
+
+  generateProjectThumbnail: (path: string, sourcePath?: string) =>
+    invokeCommand<ProjectMetadata>("generate_project_thumbnail", {
+      input: { path, sourcePath },
+    }),
+
   createProject: (input: {
     name: string;
     workspaceId: string;
@@ -627,6 +766,8 @@ export const nativeApi = {
 
   storeSessionRefresh: (refreshToken: string) =>
     invokeCommand<void>("store_session_refresh", { input: { refreshToken } }),
+
+  getSessionRefresh: () => invokeCommand<string | null>("get_session_refresh"),
 
   clearSessionRefresh: () => invokeCommand<boolean>("clear_session_refresh"),
 

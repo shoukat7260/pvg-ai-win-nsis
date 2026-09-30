@@ -8,10 +8,15 @@ import {
 } from "@pvg/opencut-integration";
 import {
   MoveClipsCommand,
+  MoveClipsToTrackCommand,
   TrimLeftCommand,
   TrimRightCommand,
   DeleteClipsCommand,
+  RippleDeleteCommand,
+  DuplicateClipsCommand,
+  RollEditCommand,
   SetTrackPropertyCommand,
+  RemoveMarkerCommand,
 } from "@pvg/editor-core";
 import { formatTimecode } from "@pvg/project-format";
 import { useEditorStore } from "@/state/editorStore";
@@ -36,6 +41,12 @@ export function OpenCutTimelinePanel() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(1200);
   const [snapGuide, setSnapGuide] = useState<number | null>(null);
+  const [ctxMenu, setCtxMenu] = useState<{
+    x: number;
+    y: number;
+    clipId: string;
+    trackId: string;
+  } | null>(null);
 
   useLayoutEffect(() => {
     const el = scrollRef.current;
@@ -45,6 +56,31 @@ export function OpenCutTimelinePanel() {
     setContainerWidth(el.clientWidth);
     return () => ro.disconnect();
   }, []);
+
+  // Restore horizontal scroll from timelineUi.scrollMs
+  useLayoutEffect(() => {
+    const el = scrollRef.current;
+    if (!el || !seq) return;
+    const pxPerMs = (50 * timelineUi.zoom) / 1000;
+    const target = timelineUi.scrollMs * pxPerMs;
+    if (Math.abs(el.scrollLeft - target) > 2) {
+      el.scrollLeft = target;
+    }
+  }, [seq?.id, timelineUi.zoom]);
+
+  // Follow playhead while playing
+  useLayoutEffect(() => {
+    const el = scrollRef.current;
+    if (!el || !playback.playing) return;
+    const pxPerMs = (50 * timelineUi.zoom) / 1000;
+    const x = playback.currentTimeMs * pxPerMs;
+    const left = el.scrollLeft;
+    const right = left + el.clientWidth;
+    if (x < left + 40 || x > right - 80) {
+      el.scrollLeft = Math.max(0, x - el.clientWidth * 0.35);
+      setTimelineUi({ scrollMs: el.scrollLeft / pxPerMs });
+    }
+  }, [playback.currentTimeMs, playback.playing, timelineUi.zoom, setTimelineUi]);
 
   const durationMs = Math.max(seq?.durationMs ?? 0, 15_000);
   const fps = seq?.frameRate ?? 30;
@@ -69,9 +105,38 @@ export function OpenCutTimelinePanel() {
 
   const sliderVal = zoomToSlider({ zoomLevel, minZoom });
 
+  const findAdjacentRight = (trackId: string, clipId: string) => {
+    const track = seq.tracks.find((t) => t.id === trackId);
+    if (!track) return null;
+    const clip = track.clips.find((c) => c.id === clipId);
+    if (!clip || clip.timelineEndMs == null) return null;
+    const end = clip.timelineEndMs;
+    return (
+      track.clips.find(
+        (c) =>
+          c.id !== clipId && Math.abs(c.timelineStartMs - end) < 0.5,
+      ) ?? null
+    );
+  };
+
+  const trackAtClientY = (clientY: number): string | null => {
+    const lanes = document.querySelectorAll(".timeline-track");
+    for (let i = 0; i < lanes.length; i++) {
+      const el = lanes[i] as HTMLElement;
+      const r = el.getBoundingClientRect();
+      if (clientY >= r.top && clientY <= r.bottom) {
+        return seq.tracks[i]?.id ?? null;
+      }
+    }
+    return null;
+  };
+
   return (
-    <div className="timeline-root opencut-timeline" data-testid="opencut-timeline-panel">
-      <div className="timeline-toolbar">
+    <div
+      className="timeline-root opencut-timeline"
+      data-testid="opencut-timeline-panel"
+      onClick={() => setCtxMenu(null)}
+    >      <div className="timeline-toolbar">
         <div className="tl-tool-group" aria-label="Playback">
           <button
             type="button"
@@ -271,7 +336,14 @@ export function OpenCutTimelinePanel() {
           ))}
         </div>
 
-        <div className="timeline-scroll" ref={scrollRef}>
+        <div
+          className="timeline-scroll"
+          ref={scrollRef}
+          onScroll={(e) => {
+            const left = e.currentTarget.scrollLeft;
+            setTimelineUi({ scrollMs: left / pxPerMsActual });
+          }}
+        >
           <div className="timeline-canvas" style={{ width: widthPx }}>
             <div
               className="timeline-ruler"
@@ -294,11 +366,28 @@ export function OpenCutTimelinePanel() {
                 data-testid="playhead"
               />
               {seq.markers.map((m) => (
-                <div
+                <button
                   key={m.id}
-                  className="timeline-marker"
+                  type="button"
+                  className={`timeline-marker ${selection.markerIds?.includes(m.id) ? "selected" : ""}`}
                   style={{ left: m.timeMs * pxPerMsActual }}
-                  title={m.name}
+                  title={`${m.name} — click to select, Delete to remove`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPlayhead(m.timeMs);
+                    setSelection({
+                      clipIds: [],
+                      trackIds: [],
+                      markerIds: [m.id],
+                    });
+                  }}
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (window.confirm(`Delete marker “${m.name}”?`)) {
+                      dispatch(new RemoveMarkerCommand(seq.id, m.id));
+                    }
+                  }}
                 />
               ))}
             </div>
@@ -343,10 +432,12 @@ export function OpenCutTimelinePanel() {
                               setSelection({
                                 clipIds: [clip.id],
                                 trackIds: [track.id],
+                                markerIds: [],
                               });
                             }
                             if (track.locked) return;
                             const startX = e.clientX;
+                            const startY = e.clientY;
                             const origin = clip.timelineStartMs;
                             const onMove = (ev: MouseEvent) => {
                               setSnapGuide(origin + (ev.clientX - startX) / pxPerMsActual);
@@ -356,13 +447,33 @@ export function OpenCutTimelinePanel() {
                               window.removeEventListener("mouseup", onUp);
                               setSnapGuide(null);
                               const deltaMs = (ev.clientX - startX) / pxPerMsActual;
+                              const deltaY = Math.abs(ev.clientY - startY);
+                              const ids =
+                                selected && selection.clipIds.length > 1
+                                  ? selection.clipIds
+                                  : [clip.id];
+                              const targetTrackId = trackAtClientY(ev.clientY);
+                              if (
+                                targetTrackId &&
+                                targetTrackId !== track.id &&
+                                deltaY > 12
+                              ) {
+                                dispatch(
+                                  new MoveClipsToTrackCommand(
+                                    seq.id,
+                                    ids,
+                                    targetTrackId,
+                                    origin + deltaMs,
+                                    timelineUi.snapEnabled,
+                                  ),
+                                );
+                                return;
+                              }
                               if (Math.abs(deltaMs) < 1) return;
                               dispatch(
                                 new MoveClipsCommand(
                                   seq.id,
-                                  selected && selection.clipIds.length > 1
-                                    ? selection.clipIds
-                                    : [clip.id],
+                                  ids,
                                   deltaMs,
                                   timelineUi.snapEnabled,
                                 ),
@@ -373,10 +484,18 @@ export function OpenCutTimelinePanel() {
                           }}
                           onContextMenu={(e) => {
                             e.preventDefault();
-                            setSelection({ clipIds: [clip.id], trackIds: [track.id] });
-                            if (window.confirm("Delete clip?")) {
-                              dispatch(new DeleteClipsCommand(seq.id, [clip.id]));
-                            }
+                            e.stopPropagation();
+                            setSelection({
+                              clipIds: [clip.id],
+                              trackIds: [track.id],
+                              markerIds: [],
+                            });
+                            setCtxMenu({
+                              x: e.clientX,
+                              y: e.clientY,
+                              clipId: clip.id,
+                              trackId: track.id,
+                            });
                           }}
                         >
                           {clip.kind === "audio" ||
@@ -413,18 +532,30 @@ export function OpenCutTimelinePanel() {
                           </span>
                           <span
                             className="trim-handle right"
+                            title="Trim · Alt+drag for roll when adjacent"
                             onMouseDown={(e) => {
                               e.stopPropagation();
                               const startX = e.clientX;
                               const origin = end;
+                              const adjacent = e.altKey
+                                ? findAdjacentRight(track.id, clip.id)
+                                : null;
                               const onUp = (ev: MouseEvent) => {
                                 window.removeEventListener("mouseup", onUp);
+                                const next = origin + (ev.clientX - startX) / pxPerMsActual;
+                                if (adjacent) {
+                                  dispatch(
+                                    new RollEditCommand(
+                                      seq.id,
+                                      clip.id,
+                                      adjacent.id,
+                                      next,
+                                    ),
+                                  );
+                                  return;
+                                }
                                 dispatch(
-                                  new TrimRightCommand(
-                                    seq.id,
-                                    clip.id,
-                                    origin + (ev.clientX - startX) / pxPerMsActual,
-                                  ),
+                                  new TrimRightCommand(seq.id, clip.id, next),
                                 );
                               };
                               window.addEventListener("mouseup", onUp);
@@ -440,6 +571,55 @@ export function OpenCutTimelinePanel() {
           </div>
         </div>
       </div>
+      {ctxMenu ? (
+        <div
+          className="tl-context-menu"
+          style={{ left: ctxMenu.x, top: ctxMenu.y }}
+          role="menu"
+          data-testid="timeline-context-menu"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              const c = seq.tracks
+                .flatMap((t) => t.clips)
+                .find((x) => x.id === ctxMenu.clipId);
+              const dur =
+                c && c.timelineEndMs != null
+                  ? c.timelineEndMs - c.timelineStartMs
+                  : 1000;
+              dispatch(
+                new DuplicateClipsCommand(seq.id, [ctxMenu.clipId], dur),
+              );
+              setCtxMenu(null);
+            }}
+          >
+            Duplicate
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              dispatch(new DeleteClipsCommand(seq.id, [ctxMenu.clipId]));
+              setCtxMenu(null);
+            }}
+          >
+            Delete
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              dispatch(new RippleDeleteCommand(seq.id, [ctxMenu.clipId]));
+              setCtxMenu(null);
+            }}
+          >
+            Ripple delete
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }
